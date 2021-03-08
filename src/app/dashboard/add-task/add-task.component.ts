@@ -117,6 +117,7 @@ export class AddTaskComponent implements OnInit {
             actualHr: new FormControl(controlValue.actualHr || null),
             status: new FormControl(controlValue.status || null),
             isTrackerUsed: new FormControl(controlValue.isTrackerUsed || false),
+            eodComments:new FormControl(controlValue.eodComments || ''),
         });
     }
 

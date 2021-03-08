@@ -157,10 +157,11 @@
                     <th class="update-cell-7">
                         <i class="fa fa-clock-o" aria-hidden="true" ngbTooltip="Tracker" placement="bottom"></i>
                     </th>
+                    <th class="update-cell-8">Comments</th>
                 </thead>
                 <tbody>
                     <ng-container *ngIf="dailyUpdateDetail.length === 0">
-                        <td colspan="7" class="table-title-td">
+                        <td colspan="8" class="table-title-td">
                             <i class="fa fa-exclamation-circle" aria-hidden="true"></i>
                             No data found.
                         </td>
@@ -168,7 +169,7 @@
                     <ng-container
                         *ngFor="let project of dailyUpdateDetail | slice: pageSize | slice: 0:f['itemsPerPage']['value']">
                         <tr>
-                            <td colspan="7" class="table-title-td">
+                            <td colspan="8" class="table-title-td">
                                 {{ project.groupByTitle }}
                             </td>
                         </tr>
@@ -202,6 +203,7 @@
                                         ngbTooltip="Without tracker" *ngIf="!task.isTrackerUsed  && task.isEodUpdate"
                                         placement="bottom"></i>
                                 </td>
+                                <td class="update-cell-8" *ngIf="task.isEodUpdate"> {{task.eodComments}} </td>
                             </tr>
                         </ng-container>
                     </ng-container>
