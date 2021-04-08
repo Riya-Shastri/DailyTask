@@ -14,6 +14,10 @@ const routes: Routes = [
         canActivate: [AuthenticationGuard],
     },
     {
+        path: 'setting',
+        loadChildren: () => import('./setting/setting.module').then(m => m.SettingModule)
+    },
+    {
         path: '**',
         redirectTo: '/dashboard'
     }

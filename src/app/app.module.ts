@@ -8,6 +8,8 @@ import { HttpClientModule } from '@angular/common/http';
 import { CoreModule } from './core/core.module';
 import { NgxPermissionsModule } from 'ngx-permissions';
 import { LayoutModule } from './layout/layout.module';
+import { BrowserAnimationsModule } from '@angular/platform-browser/animations';
+import { TagInputModule } from 'ngx-chips';
 
 @NgModule({
     declarations: [
@@ -21,7 +23,9 @@ import { LayoutModule } from './layout/layout.module';
         HttpClientModule,
         CoreModule,
         LayoutModule,
-        NgxPermissionsModule.forRoot()
+        NgxPermissionsModule.forRoot(),
+        BrowserAnimationsModule,
+        TagInputModule
     ],
     providers: [],
     bootstrap: [AppComponent]

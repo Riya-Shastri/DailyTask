@@ -12,7 +12,8 @@
     "private": true,
     "dependencies": {
         "@angular-devkit/build-angular": "~ 0.900.7",
-        "@angular/animations": "~9.0.3",
+        "@angular/animations": "^9.0.7",
+        "@angular/cdk": "^11.2.7",
         "@angular/cli": "~9.0.4",
         "@angular/common": "~9.0.3",
         "@angular/compiler": "~9.0.3",
@@ -29,6 +30,7 @@
         "font-awesome": "^4.7.0",
         "jquery": "^3.5.1",
         "moment": "^2.29.1",
+        "ngx-chips": "^2.2.2",
         "ngx-permissions": "^8.1.1",
         "path": "^0.12.7",
         "rxjs": "~6.5.4",

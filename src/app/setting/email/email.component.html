@@ -1,0 +1,103 @@
+<h4 class="username mt-3">
+    <span>Mail Setting</span>
+</h4>
+
+<hr>
+
+<form [formGroup]="emailSettingForm" (ngSubmit)="onSaveSetting()">
+    <div class="row">
+        <div class="col">
+            <ng-container *ngIf="projectsList.length > 0">
+                <ng-template #rt let-r="result" let-t="term">
+                    <ngb-highlight [result]="r.projectName" [term]="t"></ngb-highlight>
+                </ng-template>
+                <div class="form-group mb-0">
+                    <label for="exampleInputEmail1">Select Project
+                        <i class="fa fa-spinner fa-spin ml-2" aria-hidden="true" *ngIf="loading"></i>
+                    </label>
+                    <input id="typeahead-basic" type="text" class="form-control" formControlName="projectName"
+                        [ngbTypeahead]="searchProject" typeahead-show-hint="true" placeholder="Select Project"
+                        (selectItem)="onChangeProject($event)" [resultTemplate]="rt" [inputFormatter]="formatter"
+                        #instance="ngbTypeahead" (focus)="focus$.next($any($event).target.value) ;"
+                        (click)="click$.next($any($event).target.value); " (input)="getProjectName($event);" />
+                </div>
+            </ng-container>
+        </div>
+    </div>
+
+    <div class="row w-100">
+        <div class="clo-12">
+            <table class="table mt-3 mb-5">
+                <thead>
+                    <th class="cell-1">Developer</th>
+                    <th class="cell-2">Sender Name</th>
+                    <th class="cell-3">Receiver Name</th>
+                    <th class="cell-4">To Emails</th>
+                    <th class="cell-4">CC Emails</th>
+                    <th class="cell-4">BCC Emails</th>
+
+                    <th class="cell-8" *ngIf="empListControl.length > 1">Same for all</th>
+                </thead>
+                <tbody>
+                    <ng-container *ngIf="empListControl.value.length === 0">
+
+                        <td colspan="7" class="table-title-td">
+                            <i class="fa fa-exclamation-circle" aria-hidden="true"></i>
+                            No data found.
+                        </td>
+
+                    </ng-container>
+
+                    <ng-container formArrayName="emailSettingsUpdateRequests"
+                        *ngFor="let emp of empListControl.value; let i = index ;trackBy:trackByIndex">
+
+                        <tr [formGroupName]="i">
+                            <td class="cell-1">
+                                <input type="text" class="form-control" formControlName="userName" readonly>
+                            </td>
+                            <td class="cell-1">
+                                <input type="text" class="form-control" formControlName="senderName">
+                            </td>
+                            <td class="cell-1">
+                                <input type="text" class="form-control" formControlName="receiverName">
+                            </td>
+                            <td class="cell-1">
+
+                                <tag-input formControlName='toEmails' [separatorKeyCodes]="[9, 13]"
+                                    [theme]="'bootstrap3-info'" [clearOnBlur]="true" placeholder="+ Add"
+                                    secondaryPlaceholder="+ Add" modelAsStrings="true" [errorMessages]="errorMessages"
+                                    maxItems="3" [validators]="validators"></tag-input>
+
+                            </td>
+                            <td class="cell-1">
+                                <tag-input formControlName='ccEmails' [theme]="'bootstrap3-info'"
+                                    [separatorKeyCodes]="[9, 13]" [clearOnBlur]="true" placeholder="+ Add"
+                                    secondaryPlaceholder="+ Add" modelAsStrings="true" [errorMessages]="errorMessages"
+                                    [validators]="validators"></tag-input>
+
+                            </td>
+                            <td class="cell-1">
+                                <tag-input formControlName='bccEmails' [theme]="'bootstrap3-info'"
+                                    [separatorKeyCodes]="[9, 13]" [clearOnBlur]="true" placeholder="+ Add"
+                                    secondaryPlaceholder="+ Add" modelAsStrings="true" [errorMessages]="errorMessages"
+                                    [validators]="validators"></tag-input>
+
+                            </td>
+                            <td class="cell-1">
+                                <input type="checkbox" class=" same-for-all" formControlName="sameForAll"
+                                    *ngIf="i === 0 && empListControl.length > 1" (change)="onSameForAll($event)">
+                            </td>
+                        </tr>
+                    </ng-container>
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <div class="row" *ngIf="empListControl.value.length > 0">
+        <div class="col-12">
+            <button type="submit" class="btn btn-primary mb-5"> Save Settings</button>
+        </div>
+    </div>
+
+</form>

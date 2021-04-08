@@ -272,3 +272,19 @@ ngb-typeahead-window.dropdown-menu {
   font-size: 16px;
   font-weight: 500;
 }
+
+.same-for-all{
+    height: 16px;
+}
+
+.add-email-input{
+    border: none;
+}
+.add-email-input:focus{
+    border: none!important;
+}
+
+tag-input .ng2-tag-input{
+    overflow: auto  !important;
+    height: 150px !important;
+}

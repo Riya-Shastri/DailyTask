@@ -29,6 +29,11 @@
                         <i class="fa fa-refresh header-icon fa-spin" aria-hidden="true"> </i>
                     </li>
 
+                    <li class="nav-item" ngbTooltip="Mail setting" placement="bottom"
+                        *ngxPermissionsOnly="['ROLE_ADMIN']">
+                        <i class="fa fa-cog" aria-hidden="true" [routerLink]="['/setting/email']"></i>
+                    </li>
+
                     <li class="nav-item" ngbTooltip="Logout" placement="bottom">
                         <i class="fa fa-power-off header-icon" aria-hidden="true" (click)="logout()"
                             [routerLink]="['/login']"></i>
