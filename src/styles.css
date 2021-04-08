@@ -297,3 +297,7 @@ tag-input .ng2-tag-input{
     overflow: auto  !important;
     height: 150px !important;
 }
+
+.email-setting {
+    height: 25px;
+}

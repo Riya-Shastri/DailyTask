@@ -204,7 +204,7 @@ export class EmailComponent implements OnInit {
 
     validEmail(control: FormControl) {
         if (control.value) {
-            const regularExpression = /^([\w.]+)([+]?\w+)([-]?\w+)@([\w.]+)([-]?\w+)\.([a-zA-Z]{2,5})$/;
+            const regularExpression = /^([a-zA-Z0-9_\.\-])+\@(([a-zA-Z0-9\-])+\.)+([a-zA-Z0-9]{2,4})+$/;
             if (!regularExpression.test(String(control.value).toLowerCase())) {
                 return { 'validEmail': regularExpression.test(String(control.value).toLowerCase()) };
             }
