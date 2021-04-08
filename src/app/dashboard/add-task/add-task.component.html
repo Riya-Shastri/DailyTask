@@ -32,7 +32,8 @@
                 <th class="cell-7" *ngIf="displayEODFields">
                     <i class="fa fa-clock-o" aria-hidden="true" ngbTooltip="Tracker" placement="bottom"></i>
                 </th>
-                <th class="cell-8"></th>
+                <th class="cell-8" *ngIf="displayEODFields">Comments</th>
+                <th class="cell-9"></th>
             </thead>
             <tbody>
                 <ng-container formArrayName="taskList"
@@ -131,7 +132,18 @@
                                     formControlName="isTrackerUsed" (change)="changeControlValue()">
                             </div>
                         </td>
-                        <td class="cell-8" *ngIf="!blog['taskId']">
+                        <td class="cell-8" *ngIf="displayEODFields">
+                            <textarea class="form-control" rows="3" placeholder="Comments" formControlName="eodComments"
+                                (input)="changeControlValue()">
+                                </textarea>
+                            <div *ngIf="submitted" class="error-message">
+                                <small *ngIf="projectDetail.controls[i].get('eodComments').errors?.required"
+                                    class="error-message">
+                                    Comments required
+                                </small>
+                            </div>
+                        </td>
+                        <td class="cell-9" *ngIf="!blog['taskId']">
                             <i class="fa fa-times-circle-o red-icon header-icon" aria-hidden="true" ngbTooltip="Delete"
                                 placement="bottom" (click)="deleteTask(i)">
                             </i>

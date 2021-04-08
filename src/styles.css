@@ -24,6 +24,11 @@ a {
 
 .body-container {
   min-height: calc(100vh - 100px);
+  padding: 0 50px 0 50px;
+}
+
+.container-header{
+  padding: 0 50px 0 50px;
 }
 
 footer {
@@ -187,15 +192,15 @@ app-login {
 }
 
 .update-cell-1 {
-  width: 20%;
+  width: 15%;
 }
 
 .update-cell-2 {
-  width: 20%;
+  width: 15%;
 }
 
 .update-cell-3 {
-  width: 40%;
+  width: 25%;
   white-space: break-spaces;
   word-break: break-word;
 }
@@ -214,6 +219,10 @@ app-login {
 
 .update-cell-7 {
   width: 5%;
+}
+
+.update-cell-8 {
+  width: 25%;
 }
 
 .filter-wrapper .accordion .card {
