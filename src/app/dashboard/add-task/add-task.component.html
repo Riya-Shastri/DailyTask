@@ -201,7 +201,8 @@
             <ng-template carouselSlide *ngFor="let preview of previewHTML">
                 <div class="blog">
                     <div class="blog-body">
-                        <div [innerHTML]="convertHTML.bypassSecurityTrustHtml(preview.mailhtml)"> </div>
+                        <div class=" preview-mail"
+                         [innerHTML]="convertHTML.bypassSecurityTrustHtml(preview.mailhtml)"> </div>
                     </div>
                 </div>
             </ng-template>

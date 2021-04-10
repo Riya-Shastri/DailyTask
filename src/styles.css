@@ -310,3 +310,8 @@ tag-input .ng2-tag-input{
     margin-top: 10px;
     visibility: hidden!important;
 }
+
+.preview-mail{
+    width: 53%;
+    word-break: break-all;
+}
