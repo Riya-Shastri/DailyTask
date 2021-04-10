@@ -301,3 +301,12 @@ tag-input .ng2-tag-input{
 .email-setting {
     height: 25px;
 }
+
+.view-mail{
+    font-weight: 400;
+}
+
+.owl-theme .owl-nav {
+    margin-top: 10px;
+    visibility: hidden!important;
+}

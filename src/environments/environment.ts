@@ -4,8 +4,8 @@
 
 export const environment = {
     production: false,
-    //apiRoot: 'http://192.168.100.13:8081/api'
-    apiRoot: 'http://clientapp.narola.online:2219/api'
+    apiRoot: 'http://192.168.100.41:8081/api'
+    // apiRoot: 'http://clientapp.narola.online:2219/api'
 };
 
 /*

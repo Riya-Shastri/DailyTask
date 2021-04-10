@@ -3,7 +3,7 @@
         Hi, <span>{{userName}}</span>
     </h4>
     <hr>
-    <form [formGroup]="taskForm" (ngSubmit)="onSubmit()">
+    <form [formGroup]="taskForm">
 
         <div class="d-flex mb-3">
             <div class="form-check" *ngIf="taskForm.controls.taskList.value.length">
@@ -47,7 +47,7 @@
                                     {{project.projectName}}
                                 </option>
                             </select>
-                            <div *ngIf="submitted" class="error-message">
+                            <div *ngIf="submitted || previewMail" class="error-message">
                                 <small *ngIf="projectDetail.controls[i].get('projectId').errors?.required"
                                     class="error-message">
                                     Select your project
@@ -64,7 +64,7 @@
                                     {{j.taskMasterTitle}}
                                 </option>
                             </select>
-                            <div *ngIf="submitted" class="error-message">
+                            <div *ngIf="submitted || previewMail" class="error-message">
                                 <small *ngIf="projectDetail.controls[i].get('taskMasterId').errors?.required"
                                     class="error-message">
                                     Select your Task
@@ -75,7 +75,7 @@
                             <textarea class="form-control" rows="3" placeholder="Description" formControlName="taskDesc"
                                 (input)="changeControlValue()">
                                 </textarea>
-                            <div *ngIf="submitted" class="error-message">
+                            <div *ngIf="submitted || previewMail" class="error-message">
                                 <small *ngIf="projectDetail.controls[i].get('taskDesc').errors?.required"
                                     class="error-message">
                                     Description required
@@ -88,7 +88,7 @@
                             <small *ngIf="projectDetail.controls[i].get('estHr').errors?.pattern" class="error-message">
                                 Enter valid hour
                             </small>
-                            <div *ngIf="submitted" class="error-message">
+                            <div *ngIf="submitted || previewMail " class="error-message">
                                 <small *ngIf="projectDetail.controls[i].get('estHr').errors?.required"
                                     class="error-message">
                                     Estimated hour required
@@ -103,10 +103,10 @@
                                     class="error-message">
                                     Enter valid hour
                                 </small>
-                                <div *ngIf="submitted" class="error-message">
+                                <div *ngIf="submitted || previewMail" class="error-message">
                                     <small *ngIf="projectDetail.controls[i].get('actualHr').errors?.required"
                                         class="error-message">
-                                        Actual hour required
+                                        Spent hour required
                                     </small>
                                 </div>
                             </div>
@@ -119,7 +119,7 @@
                                     {{status.statusTitle}}
                                 </option>
                             </select>
-                            <div *ngIf="submitted" class="error-message">
+                            <div *ngIf="submitted || previewMail" class="error-message">
                                 <small *ngIf="projectDetail.controls[i].get('status').errors?.required"
                                     class="error-message">
                                     Select project status
@@ -136,7 +136,7 @@
                             <textarea class="form-control" rows="3" placeholder="Comments" formControlName="eodComments"
                                 (input)="changeControlValue()">
                                 </textarea>
-                            <div *ngIf="submitted" class="error-message">
+                            <div *ngIf="submitted || previewMail" class="error-message">
                                 <small *ngIf="projectDetail.controls[i].get('eodComments').errors?.required"
                                     class="error-message">
                                     Comments required
@@ -155,15 +155,22 @@
 
         <button type="submit" class="btn btn-primary mt-4"
             *ngIf="taskForm.controls['taskList']['value'].length > 0 && displayEODFields"
-            [disabled]="(isBtnDissabled) ? true : t.close() ">
+            [disabled]="(isBtnDissabled) ? true : t.close() " (click)="onSubmit(true, '')">
             <span ngbTooltip="End of day status already updated. Can't update again." placement="top" #t="ngbTooltip">
                 Submit
             </span>
         </button>
+
         <button type="submit" class="btn btn-primary mt-4"
             *ngIf="taskForm.controls['taskList']['value'].length > 0 && !displayEODFields"
-            [disabled]="(isBtnDissabled) ? true : null">
+            [disabled]="(isBtnDissabled) ? true : null" (click)="onSubmit(true, '')">
             <span> Submit </span>
+        </button>
+
+        <button type="button" class="btn btn-warning ml-4 mt-4"
+            *ngIf="taskForm.controls['taskList']['value'].length > 0 && displayEODFields"
+            [disabled]="(isBtnDissabled) ? true : null" (click)="onSubmit(false , content)">
+            <span class="text-white view-mail"> Preview Email </span>
         </button>
 
         <div class="error-message">
@@ -171,5 +178,39 @@
                 {{backendError}}
             </p>
         </div>
+        <div class="error-message">
+            <p *ngIf="hourError">
+                {{hourError}}
+            </p>
+        </div>
     </form>
 </div>
+
+
+<ng-template #content let-c="close" let-d="dismiss">
+    <div class="modal-header">
+        <h4 class="modal-title username" id="modal-basic-title">
+            <span>Preview Mail</span>
+        </h4>
+        <button type="button" class="close" aria-label="Close" (click)="d('Cross click');close()" id="closepopup">
+            <span aria-hidden="true" class="error-message">&times;</span>
+        </button>
+    </div>
+    <div class="modal-body m-3">
+        <owl-carousel-o [options]="customOptions">
+            <ng-template carouselSlide *ngFor="let preview of previewHTML">
+                <div class="blog">
+                    <div class="blog-body">
+                        <div [innerHTML]="convertHTML.bypassSecurityTrustHtml(preview.mailhtml)"> </div>
+                    </div>
+                </div>
+            </ng-template>
+        </owl-carousel-o>
+    </div>
+    <div class="modal-footer">
+        <button type="button" class=" btn btn-primary" aria-label="Close" (click)="d('Cross click');close()"
+            id="closepopup">
+            ok
+        </button>
+    </div>
+</ng-template>

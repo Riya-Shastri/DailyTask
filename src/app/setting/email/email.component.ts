@@ -23,6 +23,7 @@ export class EmailComponent implements OnInit {
     click$ = new Subject<string>();
     formatter = (x) => x;
     errorMessage;
+    backendError;
     loading = false;
 
     constructor(
@@ -74,7 +75,7 @@ export class EmailComponent implements OnInit {
 
         event.preventDefault();
         this.empListControl.clear();
-
+        this.backendError = '';
         const selectedProjectName = event.item[`projectName`];
         this.f.projectName.setValue(selectedProjectName);
 
@@ -145,61 +146,42 @@ export class EmailComponent implements OnInit {
     }
 
     onSaveSetting() {
-
+        this.backendError = '';
         const projectId = this.emailSettingForm.value['projectId'];
 
-        console.log("this.empListControl.value...", this.empListControl.value);
+        let usersForAlertMsg = '';
+        let usersForAlertArray = [];
 
+        this.emailSettingForm.value['emailSettingsUpdateRequests'].forEach(element => {
+            if (element['toEmails'].length === 0) {
+                usersForAlertMsg += '<li>' + element['userName'] + '</li>';
+                usersForAlertArray.push(element['userName']);
+            }
+        });
 
-        // this.empListControl.value.forEach(element => {
-
-        //     const bccEmailArr = [];
-        //     const toEmailArr = [];
-        //     const ccEmailArr = [];
-
-        //     element['bccEmails'].forEach(bccEmail => {
-        //         if (bccEmail['value']) {
-        //             bccEmailArr.push(bccEmail['value']);
-        //         } else {
-        //             bccEmailArr.push(bccEmail);
-        //         }
-        //     });
-        //     element['toEmails'].forEach(toEmail => {
-        //         if (toEmail['value']) {
-        //             toEmailArr.push(toEmail['value']);
-        //         } else {
-        //             toEmailArr.push(toEmail);
-        //         }
-        //     });
-        //     element['ccEmails'].forEach(ccEmail => {
-        //         if (ccEmail['value']) {
-        //             ccEmailArr.push(ccEmail['value']);
-        //         } else {
-        //             ccEmailArr.push(ccEmail);
-        //         }
-        //     });
-
-        //     setTimeout(() => {
-        //         element['bccEmails'] = bccEmailArr;
-        //         element['ccEmails'] = ccEmailArr;
-        //         element['toEmails'] = toEmailArr;
-        //     }, 500);
-
-        // });
-
-        // setTimeout(() => {
-        this.settingService.saveEmailSetting(this.emailSettingForm.value, projectId).toPromise().then(res => {
-            console.log("res...", res);
-            if (res) {
+        setTimeout(() => {
+            if (usersForAlertArray.length === 0) {
+                this.settingService.saveEmailSetting(this.emailSettingForm.value, projectId).toPromise().then(res => {
+                    if (res) {
+                        Swal.fire({
+                            text: 'Settings saved successfully',
+                            icon: 'success',
+                            confirmButtonText: 'Ok',
+                        }).then();
+                    }
+                }).catch(err => {
+                    this.backendError = err.error.errorMessage;
+                });
+            } else {
                 Swal.fire({
-                    text: 'Settings saved successfully',
-                    icon: 'success',
+                    icon: 'error',
+                    // text: 'Please provide atleast one email for "To Email" for the following users:',
                     confirmButtonText: 'Ok',
+                    html: '<h5>Please provide atleast one email for <b> To Email </b> for the following users: </h5>' +
+                        '<ul class="text-left mt-2">' + usersForAlertMsg + '</ul>',
                 }).then();
             }
-
-        }).catch(err => { });
-        // }, 1000);
+        }, 100);
     }
 
     validEmail(control: FormControl) {

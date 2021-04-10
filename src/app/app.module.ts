@@ -10,6 +10,7 @@ import { NgxPermissionsModule } from 'ngx-permissions';
 import { LayoutModule } from './layout/layout.module';
 import { BrowserAnimationsModule } from '@angular/platform-browser/animations';
 import { TagInputModule } from 'ngx-chips';
+import { CarouselModule } from 'ngx-owl-carousel-o';
 
 @NgModule({
     declarations: [
@@ -25,7 +26,8 @@ import { TagInputModule } from 'ngx-chips';
         LayoutModule,
         NgxPermissionsModule.forRoot(),
         BrowserAnimationsModule,
-        TagInputModule
+        TagInputModule,
+        CarouselModule
     ],
     providers: [],
     bootstrap: [AppComponent]

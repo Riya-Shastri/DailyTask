@@ -11,6 +11,7 @@ import { ViewUpdatesComponent } from './view-updates/view-updates.component';
 import { NgxPermissionsModule } from 'ngx-permissions';
 import { AddTaskComponent } from './add-task/add-task.component';
 import { ProjectsGooglesheetComponent } from './projects-googlesheet/projects-googlesheet.component';
+import { CarouselModule } from 'ngx-owl-carousel-o';
 
 
 @NgModule({
@@ -30,7 +31,8 @@ import { ProjectsGooglesheetComponent } from './projects-googlesheet/projects-go
         NgbAccordionModule,
         NgbModalModule,
         NgbTypeaheadModule,
-        NgxPermissionsModule.forChild()
+        NgxPermissionsModule.forChild(),
+        CarouselModule
     ]
 })
 export class DashboardModule { }

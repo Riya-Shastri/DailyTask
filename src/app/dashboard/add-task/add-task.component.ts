@@ -1,8 +1,11 @@
 import { Component, OnInit } from '@angular/core';
 import { FormArray, FormBuilder, FormControl, FormGroup, Validators } from '@angular/forms';
+import { NgbModal, NgbModalConfig } from '@ng-bootstrap/ng-bootstrap';
 import { SharedService } from 'src/app/share/shared.service';
+import { OwlOptions } from 'ngx-owl-carousel-o';
 import Swal from 'sweetalert2';
 import { DashboardService } from '../service/dashboard.service';
+import { DomSanitizer } from '@angular/platform-browser';
 
 @Component({
     selector: 'app-add-task',
@@ -11,8 +14,36 @@ import { DashboardService } from '../service/dashboard.service';
 })
 export class AddTaskComponent implements OnInit {
 
+    customOptions: OwlOptions = {
+        autoplayHoverPause: true,
+        autoWidth: true,
+        loop: true,
+        mouseDrag: true,
+        touchDrag: true,
+        pullDrag: true,
+        dots: true,
+        navSpeed: 300,
+        navText: ['', ''],
+        responsive: {
+            0: {
+                items: 1
+            },
+            400: {
+                items: 1
+            },
+            740: {
+                items: 1
+            },
+            940: {
+                items: 1
+            }
+        },
+        nav: true
+    }
+
     taskForm: FormGroup;
     submitted = false;
+    previewMail = false;
     backendError = null;
     projectList = [];
     taskStatus = [
@@ -27,13 +58,22 @@ export class AddTaskComponent implements OnInit {
     disableEod = true;
     userName = '';
     taskByProjectID = {};
+    previewHTML;
+    convertHTML;
+    hourError;
 
     constructor(
         private dashboardService: DashboardService,
         private formBuilder: FormBuilder,
         private shareDataService: SharedService,
+        private modalService: NgbModal,
+        private config: NgbModalConfig,
+        private sanitizer: DomSanitizer
     ) {
         this.userName = localStorage.getItem('userName') || '';
+        this.config.backdrop = 'static';
+        this.config.keyboard = false;
+        this.convertHTML = this.sanitizer;
     }
 
     ngOnInit(): void {
@@ -100,6 +140,7 @@ export class AddTaskComponent implements OnInit {
     // Add new task
     addNewTaskBlogs() {
         this.submitted = false;
+        this.previewMail = false;
         this.isBtnDissabled = false;
         this.projectDetail.push(this.addNewControlWithValue());
     }
@@ -117,12 +158,13 @@ export class AddTaskComponent implements OnInit {
             actualHr: new FormControl(controlValue.actualHr || null),
             status: new FormControl(controlValue.status || null),
             isTrackerUsed: new FormControl(controlValue.isTrackerUsed || false),
-            eodComments:new FormControl(controlValue.eodComments || ''),
+            eodComments: new FormControl(controlValue.eodComments || ''),
         });
     }
 
     changeControlValue() {
         this.backendError = null;
+        this.hourError = '';
         if (!this.isNewtaskDissabled) {
             this.isBtnDissabled = false;
         }
@@ -188,13 +230,7 @@ export class AddTaskComponent implements OnInit {
         }
     }
 
-    onSubmit() {
-        this.submitted = true;
-        if (!this.taskForm.valid) {
-            return;
-        }
-        this.backendError = null;
-        this.isBtnDissabled = true;
+    saveTaks() {
         this.dashboardService.saveTask(this.taskForm.value).toPromise().then(res => {
             if (res && res[`data`]) {
                 (this.projectDetail).clear();
@@ -225,7 +261,85 @@ export class AddTaskComponent implements OnInit {
         });
     }
 
+    onSubmit(displayPreview, content) {
+        this.submitted = true;
+        if (!this.taskForm.valid) {
+            return;
+        }
+        this.backendError = null;
+
+        if (displayPreview && !content) {
+            this.modalService.dismissAll();
+            this.isBtnDissabled = true;
+
+            if (this.taskForm.value['isEodUpdate']) {
+                const spentTimeArr = [];
+                this.taskForm.value['taskList'].forEach(element => {
+                    spentTimeArr.push(Number(element['actualHr']));
+                });
+
+                const sum = spentTimeArr.reduce((acc, cur) => acc + cur, 0);
+                const currentDate = new Date();
+                const CurrentDay = currentDate.getDay();
+
+                if (sum < 8 && CurrentDay !== 6) {
+                    this.hourError = 'Total spent hours should not be less-then 8.';
+                }
+                else if (sum < 4 && CurrentDay === 6) {
+                    this.hourError = 'Total spent hours should not be less-then 4.';
+                }
+                else {
+                    this.hourError = '';
+                    Swal.fire({
+                        title: 'Are you sure?',
+                        text: 'This will fill the timesheet in easycollab and send the emails as per the configuration.',
+                        icon: 'warning',
+                        showCancelButton: true,
+                        confirmButtonText: 'Yes',
+                        cancelButtonText: 'No'
+                    }).then((result) => {
+                        if (result.value) {
+                            this.saveTaks();
+                        } else {
+                            this.isBtnDissabled = false;
+                        }
+                    });
+                }
+            } else {
+                this.saveTaks();
+            }
+        } else {
+            this.taskForm.value['taskList'].forEach(element => {
+                if ((element['status'] === 1 || element['status'] === 2) && !element['actualHr']) {
+                    this.modalService.dismissAll();
+                    this.backendError = 'Please provide spent hour if status is COMPLETED/INPROGRESS';
+                }
+            });
+
+            if (!this.backendError) {
+
+                const requestPayload = { taskList: this.taskForm.value['taskList'] };
+                this.dashboardService.previewEmail(requestPayload).toPromise().then(res => {
+                    if (res && res[`data`]) {
+                        this.previewHTML = res['data'];
+                        this.modalService.open(content, { size: 'lg' });
+                    }
+                }).catch(err => {
+                    this.isBtnDissabled = false;
+                    this.previewHTML = '';
+                    if (err && err.error) {
+                        this.backendError = err.error[`errorMessage`];
+                    }
+                });
+            }
+        }
+    }
+
     trackByIndex(index) {
         return index;
+    }
+
+    close() {
+        this.modalService.dismissAll();
     }
 }

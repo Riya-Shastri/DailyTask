@@ -46,4 +46,8 @@ export class DashboardService {
         return this.http.post('/projects/' + projectId, requestPayload);
     }
 
+    previewEmail(requestPayload) {
+        return this.http.post('/tasks/generate-email-preview', requestPayload);
+    }
+
 }
