@@ -265,13 +265,16 @@
             [disabled]="(isBtnDissabled) ? true : t.close() " (click)="onSubmit(true, '')">
             <span ngbTooltip="End of day status already updated. Can't update again." placement="top" #t="ngbTooltip">
                 Submit
+                <i class="fa fa-spinner fa-spin mr-2" aria-hidden="true" *ngIf="isProcessOn"></i>
             </span>
         </button>
 
         <button type="submit" class="btn btn-primary mt-4"
             *ngIf="taskForm.controls['timesheet']['value'].length > 0 && !displayEODFields"
             [disabled]="(isBtnDissabled) ? true : null" (click)="onSubmit(true, '')">
-            <span> Submit </span>
+            <span> Submit
+                <i class="fa fa-spinner fa-spin mr-2" aria-hidden="true" *ngIf="isProcessOn"></i>
+            </span>
         </button>
 
         <button type="button" class="btn btn-warning ml-4 mt-4"
@@ -328,10 +331,12 @@
 
 <ng-template #fillLeave let-modal>
     <div class="modal-header">
-        <h4 class="modal-title" id="modal-basic-title">Profile update</h4>
+        <h4 class="modal-title username" id="modal-basic-title1">
+            <span>Profile update</span>
+        </h4>
         <button type="button" class="close" aria-label="Close" aria-hidden="true"
             (click)="modal.dismiss('Cross click')">
-            <span aria-hidden="true">&times;</span>
+            <span aria-hidden="true" class="error-message">&times;</span>
         </button>
     </div>
     <div class="modal-body">

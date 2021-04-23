@@ -75,6 +75,7 @@ export class AddTaskComponent implements OnInit {
     totalSpentTime;
     totalLeaveTime;
     totalTime;
+    isProcessOn = false;
 
     constructor(
         private dashboardService: DashboardService,
@@ -582,6 +583,7 @@ export class AddTaskComponent implements OnInit {
     //Start Final submittion
     async saveTaks() {
         try {
+            this.isProcessOn = true;
             if (this.displayEODFields) {
                 this.finalLeaveHoursArr.forEach(element => {
                     this.projectDetail.value.push(element);
@@ -643,6 +645,7 @@ export class AddTaskComponent implements OnInit {
             // setTimeout(async () => {
             await formData.append('timesheetRequestAsJson', JSON.stringify(this.taskForm.value));
             await this.dashboardService.saveTask(formData).toPromise().then(res => {
+                this.isProcessOn = false;
                 if (res && res[`data`]) {
                     (this.projectDetail).clear();
                     const timesheet = res[`data`][`timesheet`];
@@ -655,6 +658,7 @@ export class AddTaskComponent implements OnInit {
                                 this.projectDetail.push(this.addNewControlWithValue(element));
                             }, 100);
                         } else {
+                            this.finalLeaveHoursArr = [];
                             this.finalLeaveHoursArr.push(element);
                         }
                     });
@@ -677,12 +681,14 @@ export class AddTaskComponent implements OnInit {
 
             }).catch(err => {
                 this.isBtnDissabled = false;
+                this.isProcessOn = false;
                 if (err && err.error) {
                     this.backendError = err.error[`errorMessage`];
                 }
             });
             // }, 1500);
         } catch (error) {
+            this.isProcessOn = false;
             console.log("err...", error);
         }
     }
