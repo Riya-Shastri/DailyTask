@@ -27,7 +27,7 @@ a {
   padding: 0 50px 0 50px;
 }
 
-.container-header{
+.container-header {
   padding: 0 50px 0 50px;
 }
 
@@ -161,6 +161,10 @@ app-login {
   width: 75px;
 }
 
+.actual_hr_txt {
+  width: 69px;
+}
+
 .pagination {
   justify-content: center;
   margin-bottom: 0;
@@ -282,36 +286,37 @@ ngb-typeahead-window.dropdown-menu {
   font-weight: 500;
 }
 
-.same-for-all{
-    height: 16px;
+.same-for-all {
+  height: 16px;
 }
 
-.add-email-input{
-    border: none;
-}
-.add-email-input:focus{
-    border: none!important;
+.add-email-input {
+  border: none;
 }
 
-tag-input .ng2-tag-input{
-    overflow: auto  !important;
-    height: 150px !important;
+.add-email-input:focus {
+  border: none !important;
+}
+
+tag-input .ng2-tag-input {
+  overflow: auto !important;
+  height: 150px !important;
 }
 
 .email-setting {
-    height: 25px;
+  height: 25px;
 }
 
-.view-mail{
-    font-weight: 400;
+.view-mail {
+  font-weight: 400;
 }
 
 .owl-theme .owl-nav {
-    margin-top: 10px;
-    visibility: hidden!important;
+  margin-top: 10px;
+  visibility: hidden !important;
 }
 
-.preview-mail{
-    width: 53%;
-    word-break: break-all;
+.preview-mail {
+  width: 90%;
+  word-break: break-word;
 }

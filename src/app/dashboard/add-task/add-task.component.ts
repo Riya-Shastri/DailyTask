@@ -6,6 +6,7 @@ import { OwlOptions } from 'ngx-owl-carousel-o';
 import Swal from 'sweetalert2';
 import { DashboardService } from '../service/dashboard.service';
 import { DomSanitizer } from '@angular/platform-browser';
+import * as moment from 'moment';
 
 @Component({
     selector: 'app-add-task',
@@ -39,10 +40,11 @@ export class AddTaskComponent implements OnInit {
             }
         },
         nav: true
-    }
-
+    };
     taskForm: FormGroup;
+    fillLeaveForm: FormGroup;
     submitted = false;
+    fillLeaveSubmitted = false;
     previewMail = false;
     backendError = null;
     projectList = [];
@@ -60,7 +62,19 @@ export class AddTaskComponent implements OnInit {
     taskByProjectID = {};
     previewHTML;
     convertHTML;
-    hourError;
+    hourError = null;
+    uniqueProjectList = [];
+    finalLeaveHoursArr = [];
+    reason = [
+        { id: '0', title: 'Came Late' },
+        { id: '1', title: 'Left Early' },
+        { id: '2', title: 'Halfday Leave' }
+    ];
+    isEditLeaveForm = false;
+    editLeaveIndex;
+    totalSpentTime;
+    totalLeaveTime;
+    totalTime;
 
     constructor(
         private dashboardService: DashboardService,
@@ -93,8 +107,21 @@ export class AddTaskComponent implements OnInit {
     // initialize form group
     initFormGroup() {
         this.taskForm = this.formBuilder.group({
-            isEodUpdate: new FormControl(false),
-            taskList: this.formBuilder.array([]),
+            eodUpdate: new FormControl(false),
+            timesheet: this.formBuilder.array([]),
+            projects: this.formBuilder.array([]),
+        });
+
+        this.fillLeaveForm = this.formBuilder.group({
+            reasonId: new FormControl(null, Validators.compose([Validators.required])),
+            leaveReason: new FormControl(null),
+            leaveNotes: new FormControl(null, Validators.compose([Validators.required])),
+            actualHr: new FormControl(null, Validators.compose([
+                Validators.required,
+                Validators.pattern(/^(0?[0-9]|1[0-2]):[0-5][0-9]$/)])),
+            // Validators.pattern(/^\s*(?=.*[0-9])\d{1,1}(\.[1-5][0-9]?)?$/)])),
+            type: new FormControl('LEAVE'),
+            totalLeaveHours: new FormControl(0),
         });
     }
 
@@ -116,20 +143,27 @@ export class AddTaskComponent implements OnInit {
     // get all saved task on page load
     getTaskList() {
         this.dashboardService.getAllSaveTask().toPromise().then(res => {
-            if (res && res[`data`] && res[`data`][`taskList`].length > 0) {
+            if (res && res[`data`] && res[`data`][`timesheet`].length > 0) {
                 this.disableEod = false;
-                const taskList = res[`data`][`taskList`];
-                taskList.forEach(element => {
-                    if (element[`isEodUpdate`]) {
+                const timesheet = res[`data`][`timesheet`];
+                timesheet.forEach(element => {
+                    if (res['data'][`eodUpdate`]) {
+
                         this.displayEODFields = true;
-                        this.taskForm.patchValue({
-                            isEodUpdate: true
-                        });
-                        this.isNewtaskDissabled = true;
                         this.isBtnDissabled = true;
+                        this.isNewtaskDissabled = true;
                         this.disableEod = true;
+                        this.taskForm.patchValue({
+                            eodUpdate: true
+                        });
                     }
-                    this.projectDetail.push(this.addNewControlWithValue(element));
+
+                    if (element['type'] === 'LEAVE') {
+                        this.finalLeaveHoursArr.push(element);
+                    } else {
+                        this.projectDetail.push(this.addNewControlWithValue(element));
+                    }
+
                 });
             } else {
                 this.addNewTaskBlogs();
@@ -143,6 +177,27 @@ export class AddTaskComponent implements OnInit {
         this.previewMail = false;
         this.isBtnDissabled = false;
         this.projectDetail.push(this.addNewControlWithValue());
+        const taskControlArr = this.projectDetail.controls;
+
+        if (this.displayEODFields) {
+            taskControlArr.forEach((element) => {
+                const actualHr = element.get('actualHr');
+                const status = element.get('status');
+                actualHr.setValidators([Validators.required,
+                Validators.pattern(/^(0?[0-9]|1[0-2]):[0-5][0-9]$/)]);
+                status.setValidators([Validators.required]);
+                status.updateValueAndValidity();
+            });
+        } else {
+            taskControlArr.forEach((element) => {
+                const actualHr = element[`controls`][`actualHr`];
+                const status = element[`controls`][`status`];
+                actualHr.clearValidators();
+                actualHr.updateValueAndValidity();
+                status.clearValidators();
+                status.updateValueAndValidity();
+            });
+        }
     }
 
     // create form group with value and without value
@@ -153,73 +208,108 @@ export class AddTaskComponent implements OnInit {
             taskDesc: new FormControl(controlValue.taskDesc || '', Validators.compose([Validators.required])),
             estHr: new FormControl(controlValue.estHr || null, Validators.compose([
                 Validators.required,
-                Validators.pattern(/^\s*(?=.*[1-9])\d{1,2}(?:\.\d{1,2})?\s*$/)])),
+                Validators.pattern(/^(0?[0-9]|1[0-2]):[0-5][0-9]$/)])),
+            // Validators.pattern(/^\s*(?=.*[1-9])\d{0,1}(?:\.\d{1,2})?\s*$/)])),
             taskId: new FormControl(controlValue.taskId || null),
-            actualHr: new FormControl(controlValue.actualHr || null),
+            actualHr: new FormControl(
+                (controlValue.actualHr === '00:00' ||
+                    controlValue.actualHr === '0:0' ||
+                    controlValue.actualHr === '0:00' ? null : controlValue.actualHr) || null),
             status: new FormControl(controlValue.status || null),
             isTrackerUsed: new FormControl(controlValue.isTrackerUsed || false),
             eodComments: new FormControl(controlValue.eodComments || ''),
+            type: new FormControl('TASK'),
         });
     }
 
-    changeControlValue() {
+    changeControlValue(controlName?: any, index?: any) {
+
         this.backendError = null;
         this.hourError = '';
-        if (!this.isNewtaskDissabled) {
-            this.isBtnDissabled = false;
+        this.isBtnDissabled = false;
+
+        if (this.isNewtaskDissabled) {
+            this.isBtnDissabled = true;
+        }
+
+        if (controlName === 'actualHr') {
+            this.totalHoursCalculation();
+        }
+
+        if (controlName === 'Status') {
+            if (this.projectDetail.value[index]['status'] === 3) {
+                this.projectDetail.controls[index][`controls`]['actualHr'].clearValidators();
+                this.projectDetail.controls[index][`controls`]['actualHr'].updateValueAndValidity();
+            }
         }
     }
 
     // bind task dropdown
     getTaskByProjectId(selectedValue) {
         return this.taskByProjectID[selectedValue] || [];
-        // const taskList = this.projectList.find((item) => Number(item.projectId) === Number(selectedValue));
-        // return taskList ? taskList.taskMasters : [];
     }
-
-    get f() { return this.taskForm.controls.taskList; }
 
     get projectDetail(): FormArray {
-        return this.taskForm.get('taskList') as FormArray;
+        return this.taskForm.get('timesheet') as FormArray;
     }
 
-    deleteTask(index) {
-        this.projectDetail.removeAt(index);
-        const newData = [...this.projectDetail.value];
-        setTimeout(() => {
-            this.projectDetail.clear();
-        }, 100);
+    async deleteTask(index) {
 
-        setTimeout(() => {
-            if (newData.length === 0) {
+        this.backendError = null;
+        this.hourError = null;
+        this.isBtnDissabled = false;
+
+        await (<FormArray>this.projectDetail).removeAt(index);
+        const newData = [...(this.projectDetail.value)];
+        await this.projectDetail.clear();
+
+        await setTimeout(() => {
+            if ((newData).length === 0) {
+                this.taskForm.reset();
+                this.submitted = false;
                 this.projectDetail.push(this.addNewControlWithValue());
             } else {
-                newData.forEach((element, j) => {
-                    this.projectDetail.push(this.addNewControlWithValue(element));
+                newData.forEach((element) => {
+                    (<FormArray>this.projectDetail).push(this.addNewControlWithValue(element));
                 });
             }
-        }, 100);
+        }, 500);
+
+        await setTimeout(() => {
+            this.getUniqueProjects();
+            this.totalHoursCalculation();
+        }, 500);
     }
 
     showHideControls() {
-        this.displayEODFields = this.taskForm.value.isEodUpdate;
+        this.displayEODFields = this.taskForm.value.eodUpdate;
         const taskControlArr = this.projectDetail.controls;
+
         if (this.displayEODFields) {
             this.isBtnDissabled = false;
             taskControlArr.forEach((element) => {
-                const actualHr = element[`controls`][`actualHr`];
-                const status = element[`controls`][`status`];
 
-                actualHr.setValidators([Validators.pattern(/^\s*\d{1,2}(?:\.\d{1,2})?\s*$/)]);
-                actualHr.updateValueAndValidity();
+                const actualHr = element.get('actualHr');
+                const status = element.get('status');
 
+                actualHr.setValidators([Validators.required,
+                Validators.pattern(/^(0?[0-9]|1[0-2]):[0-5][0-9]$/)]);
                 status.setValidators([Validators.required]);
                 status.updateValueAndValidity();
+
             });
+
+            this.getUniqueProjects();
         } else {
+
             taskControlArr.forEach((element) => {
                 const actualHr = element[`controls`][`actualHr`];
                 const status = element[`controls`][`status`];
+
+                element[`controls`][`actualHr`].setValue(null);
+                element[`controls`][`status`].setValue(null);
+                element[`controls`][`isTrackerUsed`].setValue(null);
+                element[`controls`][`eodComments`].setValue(null);
 
                 actualHr.clearValidators();
                 actualHr.updateValueAndValidity();
@@ -230,38 +320,374 @@ export class AddTaskComponent implements OnInit {
         }
     }
 
-    saveTaks() {
-        this.dashboardService.saveTask(this.taskForm.value).toPromise().then(res => {
-            if (res && res[`data`]) {
-                (this.projectDetail).clear();
-                const taskList = res[`data`][`taskList`];
-                this.disableEod = false;
-                taskList.forEach((element) => {
-                    setTimeout(() => {
-                        this.projectDetail.push(this.addNewControlWithValue(element));
-                    }, 100);
-                });
+    trackByIndex(index) {
+        return index;
+    }
+
+    // Start Leave hours code
+    close() {
+        this.modalService.dismissAll();
+    }
+
+    fillLeaveHours(content, isedit) {
+        this.config.backdrop = 'static';
+        this.config.keyboard = false;
+
+        this.isEditLeaveForm = isedit;
+        this.fillLeaveSubmitted = false;
+        this.modalService.open(content);
+
+        if (!this.isEditLeaveForm) {
+            this.fillLeaveForm.reset();
+        }
+    }
+
+    saveAbsentData() {
+        this.fillLeaveSubmitted = true;
+
+        if (!this.fillLeaveForm.valid) {
+            return;
+        }
+        const formValue = this.fillLeaveForm.value;
+        formValue['type'] = 'LEAVE';
+
+        if (this.isEditLeaveForm) {
+            for (const key in this.reason) {
+                if (this.reason[key]['id'] === formValue['reasonId']) {
+                    formValue['leaveReason'] = this.reason[key]['title'];
+                }
             }
-            let messageText = 'Task saved successfully.';
-            if (this.displayEODFields) {
-                this.isNewtaskDissabled = true;
-                this.disableEod = true;
-                messageText = 'Your EOD update has been succussfully sent.';
+            this.finalLeaveHoursArr.push(formValue);
+        } else {
+            const selectedIndexData = this.finalLeaveHoursArr[this.editLeaveIndex];
+
+            selectedIndexData['reasonId'] = formValue['reasonId'];
+            selectedIndexData['leaveNotes'] = formValue['leaveNotes'];
+            selectedIndexData['actualHr'] = formValue['actualHr'];
+
+            for (const key in this.reason) {
+                if (this.reason[key]['id'] === selectedIndexData['reasonId']) {
+                    selectedIndexData['leaveReason'] = this.reason[key]['title'];
+                }
             }
-            Swal.fire({
-                text: messageText,
-                icon: 'success',
-                confirmButtonText: 'Ok',
-            }).then();
-        }).catch(err => {
-            this.isBtnDissabled = false;
-            if (err && err.error) {
-                this.backendError = err.error[`errorMessage`];
-            }
+        }
+
+        // totalLeaveHours
+        this.totalHoursCalculation();
+        this.modalService.dismissAll();
+        this.fillLeaveSubmitted = false;
+        this.fillLeaveForm.reset();
+        this.isEditLeaveForm = false;
+        this.editLeaveIndex = null;
+    }
+
+    editLeaveHours(index) {
+        this.editLeaveIndex = index;
+        this.fillLeaveForm.patchValue({
+            reasonId: this.finalLeaveHoursArr[index]['reasonId'],
+            leaveReason: this.finalLeaveHoursArr[index]['leaveReason'],
+            leaveNotes: this.finalLeaveHoursArr[index]['leaveNotes'],
+            actualHr: this.finalLeaveHoursArr[index]['actualHr'],
+            type: 'LEAVE'
         });
     }
 
-    onSubmit(displayPreview, content) {
+    deleteLeaveHours(index) {
+        this.finalLeaveHoursArr.splice(index, 1);
+    }
+
+    // parse(num) {
+    //     return ('0' + Math.floor(num) % 24).slice(-2) + ':' + ((num % 1) * 60 + '0').slice(0, 2);
+    // }
+
+    totalHoursCalculation() {
+
+        const spentTimeArr = [];
+        const leaveTimeArr = [];
+        this.hourError = null;
+
+        this.taskForm.value['timesheet'].forEach(element => {
+            spentTimeArr.push(element['actualHr']);
+        });
+
+        this.finalLeaveHoursArr.forEach(element => {
+            leaveTimeArr.push(element['actualHr']);
+        });
+
+        this.totalSpentTime = moment.duration('00:00');
+        spentTimeArr.forEach(element => {
+            this.totalSpentTime = this.totalSpentTime.add(moment.duration(element));
+        });
+
+        this.totalLeaveTime = moment.duration('00:00');
+        leaveTimeArr.forEach(element => {
+            this.totalLeaveTime = this.totalLeaveTime.add(moment.duration(element));
+        });
+
+        if (this.totalSpentTime) {
+            const getSpentTime = this.totalSpentTime['_data'];
+            this.totalSpentTime = getSpentTime['hours'] + ':' + getSpentTime['minutes'];
+        }
+        if (this.totalLeaveTime) {
+            const getLeaveTime = this.totalLeaveTime['_data'];
+            this.totalLeaveTime = getLeaveTime['hours'] + ':' + getLeaveTime['minutes'];
+        }
+
+        this.totalTime = moment.duration(this.totalSpentTime).add(this.totalLeaveTime);
+
+        if (this.totalTime &&
+            this.totalTime['_data']) {
+
+            const finalHour = this.totalTime['_data']['hours'];
+
+            if (finalHour >= 8) {
+                this.isBtnDissabled = false;
+            }
+
+            const currentDate = new Date();
+            const CurrentDay = currentDate.getDay();
+
+            if (finalHour < 8 && CurrentDay !== 6 && this.submitted && this.displayEODFields) {
+                this.hourError = 'Total hours should not be less-then 8.';
+                // this.isBtnDissabled = true;
+            }
+            else if (finalHour < 4 && CurrentDay === 6 && this.submitted && this.displayEODFields) {
+                this.hourError = 'Total hours should not be less-then 4.';
+                // this.isBtnDissabled = true;
+            }
+        }
+    }
+    // End Leave hours code
+
+    // Start upload file
+    get fileDetail(): FormArray {
+        return this.taskForm.get('projects') as FormArray;
+    }
+
+    addprojectFiles(controlValue: any = {}) {
+        if (this.displayEODFields && controlValue['projectId']) {
+            return this.formBuilder.group({
+                projectId: new FormControl(controlValue['projectId'] || null),
+                projectName: new FormControl(controlValue['projectName'] || null),
+                files: new FormControl(controlValue['files'] || []),
+                binaryValues: new FormControl([])
+            });
+        }
+    }
+
+    getUniqueProjects() {
+        if (this.displayEODFields && !this.isNewtaskDissabled) {
+
+
+            this.fileDetail.reset();
+            this.isBtnDissabled = false;
+
+            const projects = [...this.projectDetail.value];
+
+            const uniqueProjectIds = [...new Set(projects.map(obj => Number(obj.projectId)))];
+
+            uniqueProjectIds.forEach(uniquId => {
+                this.projectList.forEach(async (element) => {
+                    if (element['projectId'] && element['projectId'] === Number(uniquId)) {
+                        await this.fileDetail.push(this.addprojectFiles(element));
+                    }
+                });
+            });
+            setTimeout(() => {
+                this.fileDetail['value'].forEach(async (element, index) => {
+                    if (element['projectId'] === null || !element['projectName']) {
+                        await this.fileDetail['value'].splice(index, 1);
+                    }
+                });
+            }, 100);
+        }
+    }
+
+    async onFileChange(event, index) {
+
+        if (event.target.files && event.target.files[0]) {
+            const filesAmount = event.target.files.length;
+
+            for (let i = 0; i < filesAmount; i++) {
+
+                const name = event.target.files[i].name;
+                const fileObj = this.fileDetail.value[index];
+
+                for (let key in fileObj) {
+                    if (key === 'files') {
+                        if (fileObj['files'] && fileObj['files'].length > 0) {
+                            if (!fileObj['files'].includes(name)) {
+                                await fileObj['files'].push(name);
+                            } else {
+                                Swal.fire({
+                                    title: 'File name is already exist.',
+                                    text: 'If you want to upload this file, Please rename it first.',
+                                    icon: 'error',
+                                    confirmButtonText: 'Ok',
+                                }).then();
+                            }
+                        } else {
+                            if (fileObj['files']) {
+                                await fileObj['files'].push(name);
+                            }
+                        }
+                    }
+                }
+
+                // setTimeout(() => {
+                var reader = new FileReader();
+                reader.onload = (event: any) => {
+                    if (this.fileDetail.value[index] && this.fileDetail.value[index]['binaryValues']) {
+                        this.fileDetail.value[index]['binaryValues'].push({ fileName: name, fileData: event.target.result });
+                    }
+                }
+                reader.readAsDataURL(event.target.files[i]);
+                // }, 1000);
+            }
+        }
+    }
+
+    removeFile(fileindex, projectId, fileName) {
+
+        const fileDetailIndex = this.fileDetail.value.map(function (e) {
+            return e.projectId;
+        }).indexOf(projectId);
+
+        this.fileDetail.value[fileDetailIndex]['files'].splice(fileindex, 1);
+
+        if (this.fileDetail.value[fileDetailIndex] && this.fileDetail.value[fileDetailIndex]['binaryValues']) {
+            this.fileDetail.value[fileDetailIndex]['binaryValues'].forEach((element, index) => {
+                if (element['fileName'] === fileName) {
+                    this.fileDetail.value[fileDetailIndex]['binaryValues'].splice(index, 1);
+                }
+            });
+        }
+    }
+
+    DataURIToBlob(dataURI: string, filename) {
+
+        const arr = dataURI.split(',');
+        const mime = arr[0].match(/:(.*?);/)[1];
+        const bstr = atob(arr[1]);
+        let n = bstr.length;
+        const u8arr = new Uint8Array(n);
+        while (n--) {
+            u8arr[n] = bstr.charCodeAt(n);
+        }
+
+        return new File([u8arr], filename, { type: mime });
+    }
+    // End upload file
+
+    //Start Final submittion
+    async saveTaks() {
+        try {
+            if (this.displayEODFields) {
+                this.finalLeaveHoursArr.forEach(element => {
+                    this.projectDetail.value.push(element);
+                });
+
+                // setTimeout(() => {
+                this.taskForm.value['projects'].forEach(async (element, index) => {
+                    if (element['projectId'] === null || !element['projectName']) {
+                        await this.taskForm.value['projects'].splice(index, 1);
+                    }
+                });
+                this.fileDetail['value'].forEach(async (element, index) => {
+                    if (element['projectId'] === null || !element['projectName']) {
+                        await this.fileDetail['value'].splice(index, 1);
+                    }
+                });
+                // }, 800);
+            }
+
+            this.projectDetail.value.forEach(element => {
+
+                if (element['projectId']) {
+                    element['projectId'] = Number(element['projectId']);
+                }
+                if (element['taskMasterId']) {
+                    element['taskMasterId'] = Number(element['taskMasterId']);
+                }
+                if (element['taskId']) {
+                    element['taskId'] = Number(element['taskId']);
+                }
+                if (element['reasonId']) {
+                    element['reasonId'] = Number(element['reasonId']);
+                }
+                if (typeof element['estHr'] !== 'string') {
+                    element['estHr'] = JSON.stringify(element['estHr']);
+                }
+                if (typeof element['actualHr'] !== 'string') {
+                    element['actualHr'] = JSON.stringify(element['actualHr']);
+                }
+            });
+
+            const formData = new FormData();
+
+            if (this.fileDetail['value'] && this.fileDetail['value'].length > 0 && this.displayEODFields) {
+                // setTimeout(() => {
+                this.fileDetail['value'].forEach(async (element) => {
+                    if (element['binaryValues'] && element['binaryValues'].length > 0) {
+                        element['binaryValues'].forEach((file) => {
+                            formData.append('files', this.DataURIToBlob(file['fileData'], file['fileName']), file['fileName']);
+                        });
+                    }
+                    // setTimeout(() => {
+                    await delete element['binaryValues'];
+                    // }, 100);
+                });
+                // }, 100);
+            }
+
+            // setTimeout(async () => {
+            await formData.append('timesheetRequestAsJson', JSON.stringify(this.taskForm.value));
+            await this.dashboardService.saveTask(formData).toPromise().then(res => {
+                if (res && res[`data`]) {
+                    (this.projectDetail).clear();
+                    const timesheet = res[`data`][`timesheet`];
+
+                    this.disableEod = res['data']['eodUpdate'];
+                    this.isBtnDissabled = true;
+                    timesheet.forEach((element) => {
+                        if (element['type'] !== "LEAVE" && element['projectId']) {
+                            setTimeout(() => {
+                                this.projectDetail.push(this.addNewControlWithValue(element));
+                            }, 100);
+                        } else {
+                            this.finalLeaveHoursArr.push(element);
+                        }
+                    });
+                }
+
+                let messageText = 'Task saved successfully.';
+
+                if (this.displayEODFields) {
+                    this.isNewtaskDissabled = true;
+                    this.disableEod = true;
+
+                    messageText = 'Your EOD update has been succussfully sent.';
+                }
+
+                Swal.fire({
+                    text: messageText,
+                    icon: 'success',
+                    confirmButtonText: 'Ok',
+                }).then();
+
+            }).catch(err => {
+                this.isBtnDissabled = false;
+                if (err && err.error) {
+                    this.backendError = err.error[`errorMessage`];
+                }
+            });
+            // }, 1500);
+        } catch (error) {
+            console.log("err...", error);
+        }
+    }
+
+    async onSubmit(displayPreview, content) {
         this.submitted = true;
         if (!this.taskForm.valid) {
             return;
@@ -272,24 +698,24 @@ export class AddTaskComponent implements OnInit {
             this.modalService.dismissAll();
             this.isBtnDissabled = true;
 
-            if (this.taskForm.value['isEodUpdate']) {
-                const spentTimeArr = [];
-                this.taskForm.value['taskList'].forEach(element => {
-                    spentTimeArr.push(Number(element['actualHr']));
-                });
+            if (this.taskForm.value['eodUpdate']) {
 
-                const sum = spentTimeArr.reduce((acc, cur) => acc + cur, 0);
-                const currentDate = new Date();
-                const CurrentDay = currentDate.getDay();
+                setTimeout(() => {
+                    this.taskForm.value['projects'].forEach(async (element, index) => {
+                        if (element['projectId'] === null || !element['projectName']) {
+                            await this.taskForm.value['projects'].splice(index, 1);
+                        }
+                    });
+                    this.fileDetail['value'].forEach(async (element, index) => {
+                        if (element['projectId'] === null || !element['projectName']) {
+                            await this.fileDetail['value'].splice(index, 1);
+                        }
+                    });
+                }, 800);
 
-                if (sum < 8 && CurrentDay !== 6) {
-                    this.hourError = 'Total spent hours should not be less-then 8.';
-                }
-                else if (sum < 4 && CurrentDay === 6) {
-                    this.hourError = 'Total spent hours should not be less-then 4.';
-                }
-                else {
-                    this.hourError = '';
+                await this.totalHoursCalculation();
+
+                if (!this.hourError) {
                     Swal.fire({
                         title: 'Are you sure?',
                         text: 'This will fill the timesheet in easycollab and send the emails as per the configuration.',
@@ -309,7 +735,12 @@ export class AddTaskComponent implements OnInit {
                 this.saveTaks();
             }
         } else {
-            this.taskForm.value['taskList'].forEach(element => {
+
+            if (!this.taskForm.valid) {
+                return;
+            }
+
+            this.taskForm.value['timesheet'].forEach(element => {
                 if ((element['status'] === 1 || element['status'] === 2) && !element['actualHr']) {
                     this.modalService.dismissAll();
                     this.backendError = 'Please provide spent hour if status is COMPLETED/INPROGRESS';
@@ -318,7 +749,8 @@ export class AddTaskComponent implements OnInit {
 
             if (!this.backendError) {
 
-                const requestPayload = { taskList: this.taskForm.value['taskList'] };
+                const requestPayload = { timesheet: this.taskForm.value['timesheet'] };
+
                 this.dashboardService.previewEmail(requestPayload).toPromise().then(res => {
                     if (res && res[`data`]) {
                         this.previewHTML = res['data'];
@@ -334,12 +766,6 @@ export class AddTaskComponent implements OnInit {
             }
         }
     }
+    // End Final submittion
 
-    trackByIndex(index) {
-        return index;
-    }
-
-    close() {
-        this.modalService.dismissAll();
-    }
 }

@@ -6,17 +6,27 @@
     <form [formGroup]="taskForm">
 
         <div class="d-flex mb-3">
-            <div class="form-check" *ngIf="taskForm.controls.taskList.value.length">
-                <input type="checkbox" class="form-check-input" id="EODCheck" formControlName="isEodUpdate"
-                    [value]="taskForm.controls.isEodUpdate.value" (change)="showHideControls()"
+            <div class="form-check" *ngIf="taskForm.controls.timesheet.value.length > 0">
+                <input type="checkbox" class="form-check-input" id="EODCheck" formControlName="eodUpdate"
+                    [value]="taskForm.controls.eodUpdate.value" (change)="showHideControls()"
                     [attr.disabled]="disableEod? true:null">
                 <label class="form-check-label" for="EODCheck">End of day update</label>
             </div>
-            <a href="javascript:void(0)" class="ml-auto" (click)="addNewTaskBlogs()" *ngIf="!isNewtaskDissabled">
+            <a href="javascript:void(0)" class="ml-auto" (click)="fillLeaveHours(fillLeave, true)"
+                *ngIf="!isNewtaskDissabled && displayEODFields">
+                <i class="fa fa-plus-circle " aria-hidden="true"></i> Fill Leave Or Specific Reason
+            </a>
+            <a href="javascript:void(0)" class="ml-auto disable" *ngIf="isNewtaskDissabled && displayEODFields"
+                ngbTooltip="End of day status already updated. Can't fill leave or specific reason." placement="top">
+                <i class="fa fa-plus-circle " aria-hidden="true"></i> Fill Leave Or Specific Reason
+            </a>
+            <a href="javascript:void(0)" [ngClass]="displayEODFields  ? 'ml-4' : 'ml-auto'" (click)="addNewTaskBlogs()"
+                *ngIf="!isNewtaskDissabled">
                 <i class="fa fa-plus-circle " aria-hidden="true"></i> Add New Task
             </a>
-            <a href="javascript:void(0)" class="ml-auto disable" *ngIf="isNewtaskDissabled"
-                ngbTooltip="End of day status already updated. Can't add new task." placement="top">
+            <a href="javascript:void(0)" class="disable" [ngClass]="displayEODFields  ? 'ml-4' : 'ml-auto'"
+                *ngIf="isNewtaskDissabled" ngbTooltip="End of day status already updated. Can't add new task."
+                placement="top">
                 <i class="fa fa-plus-circle " aria-hidden="true"></i> Add New Task
             </a>
         </div>
@@ -26,8 +36,8 @@
                 <th class="cell-1">Project</th>
                 <th class="cell-2">Task</th>
                 <th class="cell-3">Description</th>
-                <th class="cell-4">Estimated Hours</th>
-                <th class="cell-5" *ngIf="displayEODFields">Spent Hour</th>
+                <th class="cell-4">Estimated Hours </th>
+                <th class="cell-5" *ngIf="displayEODFields">Spent Hour </th>
                 <th class="cell-6" *ngIf="displayEODFields">Status</th>
                 <th class="cell-7" *ngIf="displayEODFields">
                     <i class="fa fa-clock-o" aria-hidden="true" ngbTooltip="Tracker" placement="bottom"></i>
@@ -36,14 +46,14 @@
                 <th class="cell-9"></th>
             </thead>
             <tbody>
-                <ng-container formArrayName="taskList"
-                    *ngFor="let blog of projectDetail.value; let i = index ;trackBy:trackByIndex">
+                <ng-container formArrayName="timesheet"
+                    *ngFor="let blog of projectDetail['value']; let i = index ;trackBy:trackByIndex">
                     <tr [formGroupName]="i">
                         <td class="cell-1">
                             <select class="form-control dropdown-width w-100" formControlName="projectId"
-                                (change)="changeControlValue()">
-                                <option value="null">Select Project</option>
-                                <option *ngFor="let project of projectList" [value]="project.projectId">
+                                (change)="changeControlValue();getUniqueProjects();">
+                                <option [ngValue]="null">Select Project</option>
+                                <option *ngFor="let project of projectList" [ngValue]="project.projectId">
                                     {{project.projectName}}
                                 </option>
                             </select>
@@ -57,10 +67,10 @@
                         <td class="cell-2">
                             <select class="form-control dropdown-width w-100" formControlName="taskMasterId"
                                 (change)="changeControlValue()">
-                                <option value="null">Select Task</option>
+                                <option [ngValue]="null">Select Task</option>
                                 <option
-                                    *ngFor="let j of getTaskByProjectId(taskForm.controls['taskList']?.value[i]?.projectId)"
-                                    [value]="j.taskMasterId">
+                                    *ngFor="let j of getTaskByProjectId(taskForm.controls['timesheet']?.value[i]?.projectId)"
+                                    [ngValue]="j.taskMasterId">
                                     {{j.taskMasterTitle}}
                                 </option>
                             </select>
@@ -83,8 +93,9 @@
                             </div>
                         </td>
                         <td class="cell-4">
-                            <input type="text" class="form-control" placeholder="0" formControlName="estHr"
+                            <input type="text" class="form-control" placeholder="00:00" formControlName="estHr"
                                 (input)="changeControlValue()">
+
                             <small *ngIf="projectDetail.controls[i].get('estHr').errors?.pattern" class="error-message">
                                 Enter valid hour
                             </small>
@@ -95,10 +106,11 @@
                                 </small>
                             </div>
                         </td>
-                        <td class="cell-5" *ngIf="displayEODFields">
+                        <td class="cell-5">
                             <div *ngIf="displayEODFields">
-                                <input type="text" class="form-control" placeholder="0" formControlName="actualHr"
-                                    (input)="changeControlValue()">
+                                <input type="text" class="form-control actual_hr_txt" placeholder="00:00"
+                                    formControlName="actualHr" (input)="changeControlValue('actualHr')">
+
                                 <small *ngIf="projectDetail.controls[i].get('actualHr').errors?.pattern"
                                     class="error-message">
                                     Enter valid hour
@@ -113,8 +125,8 @@
                         </td>
                         <td class="cell-6" *ngIf="displayEODFields">
                             <select class="form-control dropdown-width w-100" formControlName="status"
-                                (change)="changeControlValue()">
-                                <option value="null">Select Status</option>
+                                (change)="changeControlValue('Status' , i)">
+                                <option [ngValue]="null">Select Status</option>
                                 <option *ngFor="let status of taskStatus" [ngValue]="status.statusId">
                                     {{status.statusTitle}}
                                 </option>
@@ -143,9 +155,14 @@
                                 </small>
                             </div>
                         </td>
-                        <td class="cell-9" *ngIf="!blog['taskId']">
+                        <td class="cell-9" *ngIf="!blog['taskId'] && !isNewtaskDissabled">
                             <i class="fa fa-times-circle-o red-icon header-icon" aria-hidden="true" ngbTooltip="Delete"
-                                placement="bottom" (click)="deleteTask(i)">
+                                placement="bottom" (click)="deleteTask(i);">
+                            </i>
+                        </td>
+                        <td class="cell-9" *ngIf="blog['taskId'] && !isNewtaskDissabled">
+                            <i class="fa fa-times-circle-o red-icon header-icon" aria-hidden="true" ngbTooltip="Delete"
+                                placement="bottom" (click)="deleteTask(i);">
                             </i>
                         </td>
                     </tr>
@@ -153,8 +170,98 @@
             </tbody>
         </table>
 
+        <div class="m-3" *ngIf="finalLeaveHoursArr.length > 0 && displayEODFields">
+            <div class="row table-title-td">
+                <span class="m-2">
+                    FILL LEAVE OR SPECIFIC REASON
+                </span>
+            </div>
+            <table class="mt-1">
+                <tr>
+                    <th class="cell-1"> Reason </th>
+                    <th class="cell-1"> Hours </th>
+                    <th class="cell-3"> Notes </th>
+                    <th class="cell-3" *ngIf="!isNewtaskDissabled"> Actions </th>
+                </tr>
+                <tr *ngFor="let finalLeaveHours of finalLeaveHoursArr ; let j = index">
+                    <td> {{finalLeaveHours['leaveReason']}}</td>
+                    <td> {{finalLeaveHours['actualHr']}}</td>
+                    <td> {{finalLeaveHours['leaveNotes']}}</td>
+                    <td *ngIf="!isNewtaskDissabled">
+                        <i class="fa fa-pencil mr-4" aria-hidden="true" ngbTooltip="Edit" placement="bottom"
+                            (click)="fillLeaveHours(fillLeave, false);editLeaveHours(j);"></i>
+
+                        <i class="fa fa-times-circle-o red-icon header-icon" aria-hidden="true" ngbTooltip="Delete"
+                            placement="bottom" (click)="deleteLeaveHours(j)">
+                        </i>
+                    </td>
+                </tr>
+                <!-- <tr colspan="4" style="height:20px;"></tr>
+                <tr>
+                    <td> <strong class="mt-5"> Total Leave Hours </strong> </td>
+                    <td> <strong class="mt-5">{{totalLeaveTime}}</strong></td>
+                </tr>
+                <tr>
+                    <td> <strong> Total Spent Hours </strong></td>
+                    <td> <strong>{{totalSpentTime}}</strong></td>
+                </tr>
+                <tr>
+                    <td> <strong> Total Hours </strong> </td>
+                    <td> <strong> {{(totalTime)}} </strong> </td>
+                </tr> -->
+            </table>
+        </div>
+
+        <ng-container formArrayName="projects">
+            <div *ngIf="taskForm.controls['timesheet']['value'].length > 0 && displayEODFields && !isNewtaskDissabled">
+
+                <div class="filter-wrapper">
+                    <ngb-accordion #acc="ngbAccordion">
+                        <!-- <ngb-accordion #acc="ngbAccordion" (panelChange)="getUniqueProjects();"> -->
+                        <ngb-panel title="Attach files in your update mail">
+                            <ng-template ngbPanelContent>
+                                <table>
+                                    <ng-container *ngFor="let project of fileDetail['value']; let index = index ">
+                                        <tr [formGroupName]="index" *ngIf="project['projectName']">
+                                            <td class="m-3">
+                                                {{project['projectName']}}
+                                            </td>
+
+                                            <td *ngIf="project['projectName']">
+                                                <input class="mb-3 mt-3 ml-3" id="file" type="file" multiple
+                                                    (change)="onFileChange($event, index) ;" />
+
+                                                <div class="ml-3"
+                                                    *ngFor="let fileName of project['files'] ; let fileindex = index">
+                                                    <span>
+                                                        <i class="fa fa-file m-2" aria-hidden="true"></i>
+                                                        {{fileName}} </span>
+                                                    <span>
+                                                        <i class="fa fa-times-circle-o red-icon header-icon"
+                                                            (click)="removeFile(fileindex , project['projectId'] , fileName)">
+                                                        </i>
+                                                    </span>
+                                                </div>
+
+                                            </td>
+                                        </tr>
+                                    </ng-container>
+                                </table>
+                                <ng-container>
+                                    <p class="filter-loading" *ngIf="fileDetail.value.length === 0">
+                                        Add your update
+                                    </p>
+                                </ng-container>
+                            </ng-template>
+                        </ngb-panel>
+                    </ngb-accordion>
+                </div>
+            </div>
+
+        </ng-container>
+
         <button type="submit" class="btn btn-primary mt-4"
-            *ngIf="taskForm.controls['taskList']['value'].length > 0 && displayEODFields"
+            *ngIf="taskForm.controls['timesheet']['value'].length > 0 && displayEODFields"
             [disabled]="(isBtnDissabled) ? true : t.close() " (click)="onSubmit(true, '')">
             <span ngbTooltip="End of day status already updated. Can't update again." placement="top" #t="ngbTooltip">
                 Submit
@@ -162,13 +269,13 @@
         </button>
 
         <button type="submit" class="btn btn-primary mt-4"
-            *ngIf="taskForm.controls['taskList']['value'].length > 0 && !displayEODFields"
+            *ngIf="taskForm.controls['timesheet']['value'].length > 0 && !displayEODFields"
             [disabled]="(isBtnDissabled) ? true : null" (click)="onSubmit(true, '')">
             <span> Submit </span>
         </button>
 
         <button type="button" class="btn btn-warning ml-4 mt-4"
-            *ngIf="taskForm.controls['taskList']['value'].length > 0 && displayEODFields"
+            *ngIf="taskForm.controls['timesheet']['value'].length > 0 && displayEODFields"
             [disabled]="(isBtnDissabled) ? true : null" (click)="onSubmit(false , content)">
             <span class="text-white view-mail"> Preview Email </span>
         </button>
@@ -178,14 +285,15 @@
                 {{backendError}}
             </p>
         </div>
+
         <div class="error-message">
             <p *ngIf="hourError">
                 {{hourError}}
             </p>
         </div>
+
     </form>
 </div>
-
 
 <ng-template #content let-c="close" let-d="dismiss">
     <div class="modal-header">
@@ -196,22 +304,82 @@
             <span aria-hidden="true" class="error-message">&times;</span>
         </button>
     </div>
-    <div class="modal-body m-3">
-        <owl-carousel-o [options]="customOptions">
-            <ng-template carouselSlide *ngFor="let preview of previewHTML">
-                <div class="blog">
-                    <div class="blog-body">
-                        <div class=" preview-mail"
-                         [innerHTML]="convertHTML.bypassSecurityTrustHtml(preview.mailhtml)"> </div>
+    <div class="container preview-mail">
+        <div class="modal-body m-3">
+            <owl-carousel-o [options]="customOptions">
+                <ng-template carouselSlide *ngFor="let preview of previewHTML">
+                    <div class="blog">
+                        <div class="blog-body preview-mail">
+                            <div [innerHTML]="convertHTML.bypassSecurityTrustHtml(preview.mailhtml)">
+                            </div>
+                        </div>
                     </div>
-                </div>
-            </ng-template>
-        </owl-carousel-o>
+                </ng-template>
+            </owl-carousel-o>
+        </div>
     </div>
     <div class="modal-footer">
         <button type="button" class=" btn btn-primary" aria-label="Close" (click)="d('Cross click');close()"
             id="closepopup">
             ok
         </button>
+    </div>
+</ng-template>
+
+<ng-template #fillLeave let-modal>
+    <div class="modal-header">
+        <h4 class="modal-title" id="modal-basic-title">Profile update</h4>
+        <button type="button" class="close" aria-label="Close" aria-hidden="true"
+            (click)="modal.dismiss('Cross click')">
+            <span aria-hidden="true">&times;</span>
+        </button>
+    </div>
+    <div class="modal-body">
+        <form [formGroup]="fillLeaveForm">
+            <div class="form-group">
+                <label class="mb-2"> Reason </label>
+                <div class="input-group mb-2">
+                    <select class="form-control dropdown-width w-100" formControlName="reasonId">
+                        <option [ngValue]="null">Select Reason</option>
+                        <option *ngFor="let j of reason" [ngValue]="j.id">
+                            {{j.title}}
+                        </option>
+                    </select>
+                    <div *ngIf="fillLeaveSubmitted" class="error-message">
+                        <small *ngIf="fillLeaveForm.controls['reasonId'].errors?.required" class="error-message">
+                            Select your Reason
+                        </small>
+                    </div>
+                </div>
+
+                <label class="mb-2"> Hours </label>
+                <div class="input-group mb-2">
+                    <input class="form-control w-100" formControlName="actualHr" placeholder="00:00" />
+
+                    <small *ngIf="fillLeaveForm.controls['actualHr'].errors?.pattern" class="error-message">
+                        Enter valid hour
+                    </small>
+
+                    <div *ngIf="fillLeaveSubmitted" class="error-message">
+                        <small *ngIf="fillLeaveForm.controls['actualHr'].errors?.required" class="error-message">
+                            Add Hours
+                        </small>
+                    </div>
+                </div>
+                <label class="mb-2"> Reason Notes </label>
+                <div class="input-group mb-2">
+                    <textarea class="form-control w-100" formControlName="leaveNotes"
+                        placeholder=" Add Reason"></textarea>
+                    <div *ngIf="fillLeaveSubmitted" class="error-message">
+                        <small *ngIf="fillLeaveForm.controls['leaveNotes'].errors?.required" class="error-message">
+                            Add Reason
+                        </small>
+                    </div>
+                </div>
+            </div>
+        </form>
+    </div>
+    <div class="modal-footer">
+        <button type="submit" class="btn btn-primary" (click)="saveAbsentData();">Save</button>
     </div>
 </ng-template>
