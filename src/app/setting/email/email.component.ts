@@ -14,26 +14,49 @@ import Swal from 'sweetalert2';
 })
 export class EmailComponent implements OnInit {
 
-    emailSettingForm: FormGroup;
+    userEmailSettingForm: FormGroup;
+    projectEmailSettingForm: FormGroup;
     projectsList = [];
     employeeList = [];
     searchProject;
-    @ViewChild('instance') instance: NgbTypeahead;
+    @ViewChild('mailInstance') mailInstance: NgbTypeahead;
+    @ViewChild('projectInstance') projectInstance: NgbTypeahead;
     focus$ = new Subject<string>();
     click$ = new Subject<string>();
-    formatter = (x) => x;
+    mailFormatter = (x) => x;
+    projectFormatter = (x) => x;
     errorMessage;
     backendError;
     loading = false;
+
+    projects = [];
+    active = 1;
+    isSaveServer = false;
+    isSaveServerDisable = true;
 
     constructor(
         private formBuilder: FormBuilder,
         private settingService: SettingService
     ) {
-        this.emailSettingForm = this.formBuilder.group({
+        this.userEmailSettingForm = this.formBuilder.group({
             projectId: new FormControl(),
             projectName: new FormControl(),
             emailSettingsUpdateRequests: this.formBuilder.array([]),
+        });
+
+        this.projectEmailSettingForm = this.formBuilder.group({
+            configType: new FormControl('PROJECT'),
+            refId: new FormControl(null, Validators.compose([Validators.required])),
+            projectName: new FormControl(null, Validators.compose([Validators.required])),
+            emailHost: new FormControl(null, Validators.compose([Validators.required])),
+            emailPort: new FormControl(null, Validators.compose([
+                Validators.required,
+                Validators.pattern(/^[0-9]{3,4}$/)
+            ])),
+            emailProtocol: new FormControl(null, Validators.compose([Validators.required])),
+            emailUser: new FormControl(null, Validators.compose([Validators.required,
+            Validators.pattern(/^(([^<>()\[\]\.,;:\s@\"]+(\.[^<>()\[\]\.,;:\s@\"]+)*)|(\".+\"))@(([^<>()[\]\.,;:\s@\"]+\.)+[^<>()[\]\.,;:\s@\"]{2,})$/i)])),
+            emailPswd: new FormControl(null, Validators.compose([Validators.required]))
         });
     }
 
@@ -41,10 +64,11 @@ export class EmailComponent implements OnInit {
         this.fillProjectDropdown();
     }
 
-    get f() { return this.emailSettingForm.controls; };
+    get f() { return this.userEmailSettingForm.controls; };
+    get projectForm() { return this.projectEmailSettingForm.controls; };
 
     get empListControl(): FormArray {
-        return this.emailSettingForm.get('emailSettingsUpdateRequests') as FormArray;
+        return this.userEmailSettingForm.get('emailSettingsUpdateRequests') as FormArray;
     }
 
     fillProjectDropdown() {
@@ -56,7 +80,43 @@ export class EmailComponent implements OnInit {
             this.loading = false;
             this.searchProject = (text$: Observable<string>) => {
                 const debouncedText$ = text$.pipe(debounceTime(200), distinctUntilChanged());
-                const clicksWithClosedPopup$ = this.click$.pipe(filter(() => !this.instance.isPopupOpen()));
+
+                if (this.active === 1) {
+                    const clicksWithClosedPopup$ = this.click$.pipe(filter(() => !this.mailInstance.isPopupOpen()));
+                    const inputFocus$ = this.focus$;
+
+                    return merge(debouncedText$, inputFocus$, clicksWithClosedPopup$).pipe(
+                        map(term => term === '' ? res[`data`]
+                            : res[`data`].filter(
+                                v => v.projectName.toLowerCase().indexOf(term.toLowerCase()) > -1).slice(0, 10))
+                    );
+                } else {
+                    const clicksWithClosedPopup$ = this.click$.pipe(filter(() => !this.projectInstance.isPopupOpen()));
+                    const inputFocus$ = this.focus$;
+
+                    return merge(debouncedText$, inputFocus$, clicksWithClosedPopup$).pipe(
+                        map(term => term === '' ? res[`data`]
+                            : res[`data`].filter(
+                                v => v.projectName.toLowerCase().indexOf(term.toLowerCase()) > -1).slice(0, 10))
+                    );
+                }
+            };
+
+        }).catch(err => {
+            this.projectsList = [];
+        });
+    }
+
+    fillTypeaheadForProject() {
+        this.loading = true;
+        this.settingService.getProjects().toPromise().then(res => {
+
+            this.projectsList = res[`data`];
+
+            this.loading = false;
+            this.searchProject = (text$: Observable<string>) => {
+                const debouncedText$ = text$.pipe(debounceTime(200), distinctUntilChanged());
+                const clicksWithClosedPopup$ = this.click$.pipe(filter(() => !this.projectInstance.isPopupOpen()));
                 const inputFocus$ = this.focus$;
 
                 return merge(debouncedText$, inputFocus$, clicksWithClosedPopup$).pipe(
@@ -71,35 +131,76 @@ export class EmailComponent implements OnInit {
         });
     }
 
-    onChangeProject(event) {
+    onChangeProject(event, tabNo) {
 
         event.preventDefault();
         this.empListControl.clear();
         this.backendError = '';
+        this.isSaveServer = false;
+        this.isSaveServerDisable = true;
         const selectedProjectName = event.item[`projectName`];
-        this.f.projectName.setValue(selectedProjectName);
+
+        if (tabNo === 1) {
+            this.f.projectName.setValue(selectedProjectName);
+        } else {
+            this.projectForm.projectName.setValue(selectedProjectName);
+        }
 
         this.projectsList.filter((cValue) => {
             if (cValue[`projectName`] === selectedProjectName) {
-                this.f[`projectId`].setValue(cValue[`projectId`]);
+
+                if (tabNo === 1) {
+                    this.f[`projectId`].setValue(cValue[`projectId`]);
+                } else {
+                    this.projectForm[`refId`].setValue(cValue[`projectId`]);
+                }
             }
         });
 
-        this.settingService.getUserByProject(this.f[`projectId`].value).toPromise().then(res => {
-            if (res && res['data'] && res['data']['emailSettings']) {
-                this.employeeList = res['data']['emailSettings'];
+        if (tabNo === 1) {
+            this.settingService.getUserByProject(this.f[`projectId`].value).toPromise().then(res => {
+                if (res && res['data'] && res['data']['emailSettings']) {
+                    this.employeeList = res['data']['emailSettings'];
 
-                this.employeeList.forEach(emp => {
-                    //Add employee
-                    this.empListControl.push(this.addNewControlWithValue(emp));
-                });
-            }
-        }).catch(err => { this.employeeList = []; });
+                    this.employeeList.forEach(emp => {
+                        //Add employee
+                        this.empListControl.push(this.addNewControlWithValue(emp));
+                    });
+                }
+            }).catch(err => { this.employeeList = []; });
+        } else {
+            this.settingService.getProejctServer(this.projectForm[`refId`].value).toPromise().then(res => {
+                if (res && res['data']) {
+                    this.projectEmailSettingForm.patchValue({
+                        configType: 'PROJECT',
+                        emailHost: res['data']['emailHost'],
+                        emailProtocol: res['data']['emailProtocol'],
+                        emailUser: res['data']['emailUser'],
+                        emailPswd: res['data']['emailPswd']
+                    });
+
+                    if (res && res['data'] && res['data']['emailPort'] === 0) {
+                        this.projectEmailSettingForm.patchValue({
+                            emailPort: null
+                        });
+                    } else {
+                        this.projectEmailSettingForm.patchValue({
+                            emailPort: res['data']['emailPort'],
+                        });
+
+                    }
+                }
+            }).catch(err => { });
+
+        }
     }
 
-    getProjectName(event) {
-        if (!event.target.value) {
+    getProjectName(event, tabNo) {
+        if (tabNo === 1 && !event.target.value) {
             this.f[`projectId`].setValue(null);
+        }
+        if (tabNo === 2 && !event.target.value) {
+            this.projectForm[`refId`].setValue(null);
         }
     }
 
@@ -147,12 +248,12 @@ export class EmailComponent implements OnInit {
 
     onSaveSetting() {
         this.backendError = '';
-        const projectId = this.emailSettingForm.value['projectId'];
+        const projectId = this.userEmailSettingForm.value['projectId'];
 
         let usersForAlertMsg = '';
         let usersForAlertArray = [];
 
-        this.emailSettingForm.value['emailSettingsUpdateRequests'].forEach(element => {
+        this.userEmailSettingForm.value['emailSettingsUpdateRequests'].forEach(element => {
             if (element['toEmails'].length === 0) {
                 usersForAlertMsg += '<li>' + element['userName'] + '</li>';
                 usersForAlertArray.push(element['userName']);
@@ -161,7 +262,7 @@ export class EmailComponent implements OnInit {
 
         setTimeout(() => {
             if (usersForAlertArray.length === 0) {
-                this.settingService.saveEmailSetting(this.emailSettingForm.value, projectId).toPromise().then(res => {
+                this.settingService.saveEmailSetting(this.userEmailSettingForm.value, projectId).toPromise().then(res => {
                     if (res) {
                         Swal.fire({
                             text: 'Settings saved successfully',
@@ -184,6 +285,49 @@ export class EmailComponent implements OnInit {
         }, 100);
     }
 
+    saveServer(isTestClick) {
+
+        this.isSaveServer = true;
+        if (!this.projectEmailSettingForm.valid) {
+            return;
+        }
+
+        let finalPayload;
+
+        if (isTestClick) {
+            finalPayload = {
+                "testMailConfig": true,
+                "emailConfigSetting": this.projectEmailSettingForm.value
+            }
+        } else {
+            finalPayload = {
+                "emailConfigSetting": this.projectEmailSettingForm.value
+            }
+        }
+
+        this.settingService.testProejctServer(finalPayload, isTestClick).toPromise().then(res => {
+
+            if (res && isTestClick) {
+                this.isSaveServerDisable = false;
+
+                Swal.fire({
+                    text: 'Test server successfully',
+                    icon: 'success',
+                    confirmButtonText: 'Ok',
+                }).then();
+            }
+            if (res && !isTestClick) {
+                Swal.fire({
+                    text: 'Saved server successfully',
+                    icon: 'success',
+                    confirmButtonText: 'Ok',
+                }).then();
+            }
+        }).catch(err => {
+            this.backendError = err.error['errorMessage'];
+        });
+    }
+
     validEmail(control: FormControl) {
         if (control.value) {
             const regularExpression = /^([a-zA-Z0-9_\.\-])+\@(([a-zA-Z0-9\-])+\.)+([a-zA-Z0-9]{2,4})+$/;
@@ -199,5 +343,10 @@ export class EmailComponent implements OnInit {
     public errorMessages = {
         'validEmail': 'Please enter valid email id'
     };
+
+    changeControlValue() {
+        this.isSaveServerDisable = true;
+        this.backendError = '';
+    }
 
 }

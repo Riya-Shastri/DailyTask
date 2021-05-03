@@ -42,8 +42,24 @@ export class DashboardService {
     }
 
     getTaskdetail(requestPayoad) {
-        requestPayoad[`fromDate`] = this.manageDate.objectToDate(requestPayoad.fromDate);
-        requestPayoad[`toDate`] = this.manageDate.objectToDate(requestPayoad.toDate);
+
+        if (typeof requestPayoad[`fromDate`] === 'object') {
+            requestPayoad[`fromDate`] = this.manageDate.objectToDate(requestPayoad.fromDate);
+            requestPayoad[`toDate`] = this.manageDate.objectToDate(requestPayoad.toDate);
+        }
+
+        // const finalFieldsToShow = [];
+        // if (requestPayoad['fieldsToShow'] &&
+        //     requestPayoad['fieldsToShow'].length > 0) {
+        //     requestPayoad['fieldsToShow'].forEach(element => {
+        //         if (!finalFieldsToShow.includes(element['item_id'])) {
+        //             finalFieldsToShow.push(element['item_id']);
+        //         }
+        //     });
+        // }
+
+        // requestPayoad['fieldsToShow'] = finalFieldsToShow;
+
         return this.http.post('/tasks/report', requestPayoad);
     }
 
@@ -53,6 +69,10 @@ export class DashboardService {
 
     previewEmail(requestPayload) {
         return this.http.post('/tasks/generate-email-preview', requestPayload);
+    }
+
+    addEditMasterTask(requestPayload) {
+        return this.http.post('/tasks/taskmaster', requestPayload);
     }
 
 }

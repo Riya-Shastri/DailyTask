@@ -307,6 +307,14 @@ tag-input .ng2-tag-input {
   height: 25px;
 }
 
+.home-icon {
+  font-size: 23px;
+}
+
+.task-icon {
+  height: 21px;
+}
+
 .view-mail {
   font-weight: 400;
 }
@@ -319,4 +327,36 @@ tag-input .ng2-tag-input {
 .preview-mail {
   width: 90%;
   word-break: break-word;
+}
+
+.title {
+  cursor: pointer;
+  font-weight: 500;
+}
+
+.title td:hover {
+  background-color: #0784c796;
+}
+
+.task-title {
+  padding: 10px;
+  background: gray;
+}
+
+.project-list {
+  /* overflow-y: scroll; */
+  max-height: 60%;
+}
+
+.cell-2 select option:nth-child(2) {
+  color: blue;
+}
+
+.box {
+  border: #80808057;
+  border-style: groove;
+  border-radius: 25px;
+  border-block-width: 1px;
+  margin: 25px;
+  padding: 30px;
 }

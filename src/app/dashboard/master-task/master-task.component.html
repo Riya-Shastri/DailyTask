@@ -1,0 +1,122 @@
+<div class="py-3">
+    <div class="row">
+        <div class="col">
+            <div class="d-flex mb-3 w-100">
+                <a href="javascript:void(0)" class="ml-auto" (click)="addTask(OpenPopup , false , null)">
+                    <i class="fa fa-plus-circle " aria-hidden="true"></i>
+                    Add Task
+                </a>
+            </div>
+        </div>
+    </div>
+    <div class="row">
+        <div class="col-6 project-list">
+            <div>
+                <table class="table">
+                    <thead>
+                        <th class="cell-1 table-title-td">Project List</th>
+                    </thead>
+                    <tbody>
+                        <ng-container *ngFor="let project of projectList; let i = index ;">
+                            <tr (click)="getTaskList(project['projectId'])" class="title">
+                                <td colspan="3">
+                                    {{ project.projectName }}
+                                </td>
+                            </tr>
+                        </ng-container>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+        <div class="col-6 project-list">
+            <table class="table">
+                <thead>
+                    <th class="cell-9 table-title-td">Task</th>
+                    <th class="table-title-td">Edit</th>
+                </thead>
+                <tbody>
+                    <tr *ngIf="selectedProject.length > 0" class="table-title-td task-title">
+                        <td colspan="2">
+                            {{ selectedProject[0].projectName }}
+                        </td>
+                    </tr>
+                    <ng-container *ngIf="masterTaskList.length === 0">
+                        <td colspan="2" class="table-title-td task-title">
+                            <i class="fa fa-exclamation-circle" aria-hidden="true"></i>
+                            No data found.
+                        </td>
+                    </ng-container>
+                    <ng-container *ngIf="masterTaskList.length > 0">
+                        <ng-container *ngFor="let task of masterTaskList; let j = index ;">
+                            <tr>
+                                <td>{{task['taskMasterTitle']}}</td>
+                                <td>
+                                    <i class="fa fa-pencil  header-icon" aria-hidden="true" ngbTooltip="Edit"
+                                        placement="bottom" (click)="addTask(OpenPopup , true , task)">
+                                    </i>
+                                </td>
+                            </tr>
+                        </ng-container>
+                    </ng-container>
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+
+<ng-template #OpenPopup let-modal>
+    <div class="modal-header">
+        <h4 class="modal-title username" id="modal-basic-title1" *ngIf="!isEditForm">
+            <span>Add Task</span>
+        </h4>
+        <h4 class="modal-title username" id="modal-basic-title1" *ngIf="isEditForm">
+            <span>Edit Task</span>
+        </h4>
+        <button type="button" class="close" aria-label="Close" aria-hidden="true"
+            (click)="modal.dismiss('Cross click')">
+            <span aria-hidden="true" class="error-message">&times;</span>
+        </button>
+    </div>
+    <div class="modal-body">
+        <form [formGroup]="addTaskForm">
+            <div class="form-group">
+                <div *ngIf="!isEditForm">
+                    <label class="mb-2"> Select Project </label>
+                    <div class="input-group mb-2">
+                        <select class="form-control dropdown-width w-100" formControlName="projectId">
+                            <option [ngValue]="null">Select Project</option>
+                            <option *ngFor="let project of projectList" [ngValue]="project['projectId']">
+                                {{ project.projectName }}
+                            </option>
+                        </select>
+                        <div *ngIf="addTaskSubmitted" class="error-message">
+                            <small *ngIf="addTaskForm.controls['projectId'].errors?.required" class="error-message">
+                                Select your Project
+                            </small>
+                        </div>
+                    </div>
+                </div>
+                <div *ngIf="isEditForm">
+                    <label class="mb-2"> Project Name</label>
+                    <div class="input-group mb-2" *ngIf="selectedProject.length > 0">
+                        <label class="mb-2"> {{ selectedProject[0].projectName }} </label>
+                    </div>
+                </div>
+                <label class="mb-2"> Task title </label>
+                <div class="input-group mb-2">
+                    <input class="form-control w-100" placeholder="Task Title" formControlName="masterTaskTitle" />
+
+                    <div *ngIf="addTaskSubmitted" class="error-message">
+                        <small *ngIf="addTaskForm.controls['masterTaskTitle'].errors?.required" class="error-message">
+                            Add task title
+                        </small>
+                    </div>
+                </div>
+            </div>
+        </form>
+    </div>
+    <div class="modal-footer">
+        <button type="submit" class="btn btn-primary" (click)="saveData();">Save</button>
+    </div>
+</ng-template>

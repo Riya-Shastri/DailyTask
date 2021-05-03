@@ -120,6 +120,15 @@
                                             <small> {{this.dateFilterError}} </small>
                                         </div>
                                     </div>
+                                    <div class="col-sm-2 mt-4">
+                                        <div class="form-group" *ngIf="showHistory">
+                                            <label class="mb-4"> </label>
+                                            <input type="checkbox" value="description"
+                                                [checked]="viewUpdateForm['controls']['isDecShow']['value']['value']"
+                                                (change)="displayDescription($event)">
+                                            <span for="isshow"> Show description</span>
+                                        </div>
+                                    </div>
                                     <div class="col-sm-2">
                                         <div class="form-group">
                                             <label class="mb-4"> </label>
@@ -150,10 +159,10 @@
                     </th>
                     <th class="update-cell-1" *ngIf="showHistory">Date</th>
                     <th class="update-cell-2">Task</th>
-                    <th class="update-cell-3" *ngIf="!showHistory">Description</th>
+                    <th class="update-cell-3" *ngIf="!showHistory || showDescription">Description</th>
                     <th class="update-cell-4" *ngIf="!showHistory">Estimated Hour</th>
                     <th class="update-cell-5">Spent Hour</th>
-                    <th class="update-cell-6" *ngIf="!showHistory">Status</th>
+                    <th class="update-cell-6" *ngIf="!showHistory || showDescription">Status</th>
                     <th class="update-cell-7">
                         <i class="fa fa-clock-o" aria-hidden="true" ngbTooltip="Tracker" placement="bottom"></i>
                     </th>
@@ -180,30 +189,31 @@
                                 <td class="update-cell-1" *ngIf="showHistory"> {{task.taskCreatedOn}}
                                 </td>
                                 <td class="update-cell-2"> {{task.taskMasterTitle}} </td>
-                                <td class="update-cell-3" *ngIf="!showHistory"> {{task.taskDesc}} </td>
+                                <td class="update-cell-3" *ngIf="!showHistory || showDescription"> {{task.taskDesc}}
+                                </td>
                                 <td class="update-cell-4" *ngIf="!showHistory"> {{task.estHr}}</td>
                                 <td class="update-cell-5">
-                                    <span *ngIf="task.isEodUpdate">
-                                        {{task.actualHr}}
-                                    </span>
+                                    {{task.actualHr}}
                                 </td>
-                                <td class="update-cell-6" *ngIf="!showHistory">
-                                    <span *ngIf="task.statusTitle === 'REMAINING' && task.isEodUpdate"
+                                <td class="update-cell-6" *ngIf="!showHistory || showDescription">
+                                    <span *ngIf="task.statusTitle === 'REMAINING'"
                                         class="badge badge-secondary">REMAINING</span>
-                                    <span *ngIf="task.statusTitle === 'INPROGRESS' && task.isEodUpdate"
+                                    <span *ngIf="task.statusTitle === 'INPROGRESS'"
                                         class="badge badge-primary">INPROGRESS</span>
-                                    <span *ngIf="task.statusTitle === 'COMPLETED' && task.isEodUpdate"
+                                    <span *ngIf="task.statusTitle === 'COMPLETED'"
                                         class="badge badge-success">COMPLETED</span>
+                                    <span *ngIf="!task.statusTitle" class="ml-4">--</span>
                                 </td>
                                 <td class="update-cell-7">
                                     <i class="fa fa-check-circle-o green-icon" aria-hidden="true"
-                                        ngbTooltip="With tracker" *ngIf="task.isTrackerUsed  && task.isEodUpdate"
-                                        placement="bottom"></i>
+                                        ngbTooltip="With tracker" *ngIf="task.isTrackerUsed" placement="bottom"></i>
                                     <i class="fa fa-times-circle-o red-icon" aria-hidden="true"
-                                        ngbTooltip="Without tracker" *ngIf="!task.isTrackerUsed  && task.isEodUpdate"
-                                        placement="bottom"></i>
+                                        ngbTooltip="Without tracker" *ngIf="!task.isTrackerUsed" placement="bottom"></i>
                                 </td>
-                                <td class="update-cell-8" *ngIf="task.isEodUpdate"> {{task.eodComments}} </td>
+                                <td class="update-cell-8">
+                                    <span *ngIf="task.eodComments">{{task.eodComments}} </span>
+                                    <span *ngIf="!task.eodComments" class="ml-4">--</span>
+                                </td>
                             </tr>
                         </ng-container>
                     </ng-container>

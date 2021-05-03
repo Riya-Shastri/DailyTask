@@ -9,6 +9,10 @@
 
             <div class="collapse navbar-collapse" id="navbarSupportedContent" *ngIf="isLogin">
                 <ul class="navbar-nav w-100">
+                    <!-- <li class="nav-item" ngbTooltip="Dashboard" placement="bottom"
+                        *ngxPermissionsOnly="['ROLE_USER']">
+                        <i class="fa fa-home home-icon" aria-hidden="true" [routerLink]="['/']"></i>
+                    </li> -->
 
                     <li class="nav-item" ngbTooltip="View updates" placement="bottom"
                         *ngxPermissionsOnly="['ROLE_ADMIN']">
@@ -20,19 +24,27 @@
                         <i class="fa fa-link header-icon" aria-hidden="true" [routerLink]="['/project-links']"></i>
                     </li>
 
-                    <li class="nav-item" ngbTooltip="Sync With EasyCollab" placement="bottom" *ngIf="!loadSyncIcon">
-                        <i class="fa fa-refresh header-icon" aria-hidden="true" (click)="syncWithEasyCollab()">
-                        </i>
-                    </li>
-                    <li class="nav-item" ngbTooltip="Sync With EasyCollab is in progress" placement="bottom"
-                        *ngIf="loadSyncIcon">
-                        <i class="fa fa-refresh header-icon fa-spin" aria-hidden="true"> </i>
-                    </li>
 
                     <li class="nav-item" ngbTooltip="Mail setting" placement="bottom"
                         *ngxPermissionsOnly="['ROLE_ADMIN']">
                         <img src="assets/images/email-settings-3.png" class="email-setting header-icon"
                             [routerLink]="['/setting/email']" aria-hidden="true" />
+                    </li>
+
+                    <!-- <li class="nav-item" ngbTooltip="Task Detail" placement="bottom"
+                        *ngxPermissionsOnly="['ROLE_USER']">
+                        <img src="assets/images/task3.png" class="task-icon header-icon"
+                            [routerLink]="['/project/task-master']" aria-hidden="true" />
+                    </li> -->
+
+                    <li class="nav-item" ngbTooltip="Sync With EasyCollab" placement="bottom" *ngIf="!loadSyncIcon">
+                        <i class="fa fa-refresh header-icon" aria-hidden="true" (click)="syncWithEasyCollab()">
+                        </i>
+                    </li>
+
+                    <li class="nav-item" ngbTooltip="Sync With EasyCollab is in progress" placement="bottom"
+                        *ngIf="loadSyncIcon">
+                        <i class="fa fa-refresh header-icon fa-spin" aria-hidden="true"> </i>
                     </li>
 
                     <li class="nav-item" ngbTooltip="Logout" placement="bottom">

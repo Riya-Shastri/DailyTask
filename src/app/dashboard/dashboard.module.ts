@@ -12,13 +12,15 @@ import { NgxPermissionsModule } from 'ngx-permissions';
 import { AddTaskComponent } from './add-task/add-task.component';
 import { ProjectsGooglesheetComponent } from './projects-googlesheet/projects-googlesheet.component';
 import { CarouselModule } from 'ngx-owl-carousel-o';
+import { MasterTaskComponent } from './master-task/master-task.component';
 
 
 @NgModule({
     declarations: [
         ViewUpdatesComponent,
         AddTaskComponent,
-        ProjectsGooglesheetComponent
+        ProjectsGooglesheetComponent,
+        MasterTaskComponent
     ],
     imports: [
         CommonModule,

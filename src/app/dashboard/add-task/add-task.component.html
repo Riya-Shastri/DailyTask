@@ -66,13 +66,19 @@
                         </td>
                         <td class="cell-2">
                             <select class="form-control dropdown-width w-100" formControlName="taskMasterId"
-                                (change)="changeControlValue()">
+                                #mySelectedTask
+                                (change)="changeControlValue();
+                                addTask(addMasterTask , projectDetail['value'][i]['projectId'] ,mySelectedTask['value'] , i) ">
                                 <option [ngValue]="null">Select Task</option>
+                                <option [value]="false" *ngIf="projectDetail['value'][i]['projectId']">
+                                    <strong> + Add New Task</strong>
+                                </option>
                                 <option
                                     *ngFor="let j of getTaskByProjectId(taskForm.controls['timesheet']?.value[i]?.projectId)"
                                     [ngValue]="j.taskMasterId">
                                     {{j.taskMasterTitle}}
                                 </option>
+
                             </select>
                             <div *ngIf="submitted || previewMail" class="error-message">
                                 <small *ngIf="projectDetail.controls[i].get('taskMasterId').errors?.required"
@@ -228,7 +234,7 @@
                                             </td>
 
                                             <td *ngIf="project['projectName']">
-                                                <input class="mb-3 mt-3 ml-3" id="file" type="file" multiple
+                                                <input class="mb-3 mt-3 ml-3" id="file" type="file" multiple #myImage
                                                     (change)="onFileChange($event, index) ;" />
 
                                                 <div class="ml-3"
@@ -386,5 +392,43 @@
     </div>
     <div class="modal-footer">
         <button type="submit" class="btn btn-primary" (click)="saveAbsentData();">Save</button>
+    </div>
+</ng-template>
+
+<ng-template #addMasterTask let-modal>
+    <div class="modal-header">
+        <h4 class="modal-title username" id="modal-basic-title1">
+            <span>Add Task</span>
+        </h4>
+        <button type="button" class="close" aria-label="Close" aria-hidden="true"
+            (click)="modal.dismiss('Cross click')">
+            <span aria-hidden="true" class="error-message">&times;</span>
+        </button>
+    </div>
+    <div class="modal-body">
+        <form [formGroup]="masterTaskForm">
+            <div class="form-group">
+                <div>
+                    <label class="mb-2"> Project Name</label>
+                    <div class="input-group mb-2" *ngIf="selctedProjectName">
+                        <label class="mb-2"> {{ selctedProjectName }} </label>
+                    </div>
+                </div>
+                <label class="mb-2"> Task title </label>
+                <div class="input-group mb-2">
+                    <input class="form-control w-100" placeholder="Task Title" formControlName="masterTaskTitle" />
+
+                    <div *ngIf="addTaskSubmitted" class="error-message">
+                        <small *ngIf="masterTaskForm.controls['masterTaskTitle'].errors?.required"
+                            class="error-message">
+                            Add task title
+                        </small>
+                    </div>
+                </div>
+            </div>
+        </form>
+    </div>
+    <div class="modal-footer">
+        <button type="submit" class="btn btn-primary" (click)="saveData();">Save</button>
     </div>
 </ng-template>

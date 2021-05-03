@@ -1,5 +1,5 @@
 import { Component, OnInit, ViewChild } from '@angular/core';
-import { FormBuilder, FormControl, FormGroup } from '@angular/forms';
+import { FormArray, FormBuilder, FormControl, FormGroup } from '@angular/forms';
 import { NgbDateStruct, NgbTypeahead } from '@ng-bootstrap/ng-bootstrap';
 import { merge, Observable, Subject } from 'rxjs';
 import { debounceTime, distinctUntilChanged, filter, map } from 'rxjs/operators';
@@ -36,6 +36,7 @@ export class ViewUpdatesComponent implements OnInit {
     @ViewChild('instance') instance: NgbTypeahead;
     focus$ = new Subject<string>();
     click$ = new Subject<string>();
+    showDescription = false;
 
     formatter = (x) => x;
 
@@ -48,6 +49,9 @@ export class ViewUpdatesComponent implements OnInit {
         this.userName = localStorage.getItem('userName') || '';
         this.minDate = this.manageDate.setMinDate();
         this.maxDate = this.manageDate.setMaxDate();
+    }
+
+    ngOnInit(): void {
 
         this.viewUpdateForm = this.formBuilder.group({
             projectId: new FormControl(),
@@ -57,11 +61,11 @@ export class ViewUpdatesComponent implements OnInit {
             currentPage: new FormControl(1),
             groupBy: new FormControl('User'),
             fromDate: new FormControl(this.maxDate),
-            toDate: new FormControl(this.maxDate)
+            toDate: new FormControl(this.maxDate),
+            fieldsToShow: new FormControl(),
+            isDecShow: new FormControl()
         });
-    }
 
-    ngOnInit(): void {
         this.fillProjectDropdown();
         this.getTaskDetail();
         this.shareDataService.currentSyncValue.subscribe(message => {
@@ -71,6 +75,24 @@ export class ViewUpdatesComponent implements OnInit {
                 this.shareDataService.changeMessage(false);
             }
         });
+    }
+
+    async displayDescription(values: any) {
+
+        if (values['currentTarget']['checked']) {
+            this.viewUpdateForm.patchValue({
+                fieldsToShow: ['DESCRIPTION'],
+                isDecShow: new FormControl(true)
+            });
+            this.showDescription = true;
+        } else {
+            this.viewUpdateForm.patchValue({
+                fieldsToShow: [],
+                isDecShow: new FormControl(false)
+            });
+            this.showDescription = false;
+        }
+        this.getTaskDetail();
     }
 
     get f() { return this.viewUpdateForm.controls; }
@@ -97,6 +119,12 @@ export class ViewUpdatesComponent implements OnInit {
 
     getTaskDetail() {
         this.apiCalled = false;
+
+        if (this.viewUpdateForm.value['fieldsToShow'] &&
+            this.viewUpdateForm.value['fieldsToShow'].length > 0) {
+            this.showDescription = true;
+        }
+
         this.dashboardService.getTaskdetail(this.viewUpdateForm.value).toPromise().then(res => {
             if (res && res[`data`][`groupedList`]) {
                 this.apiCalled = true;

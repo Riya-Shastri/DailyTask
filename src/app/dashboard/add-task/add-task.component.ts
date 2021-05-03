@@ -43,6 +43,7 @@ export class AddTaskComponent implements OnInit {
     };
     taskForm: FormGroup;
     fillLeaveForm: FormGroup;
+    masterTaskForm: FormGroup;
     submitted = false;
     fillLeaveSubmitted = false;
     previewMail = false;
@@ -76,6 +77,9 @@ export class AddTaskComponent implements OnInit {
     totalLeaveTime;
     totalTime;
     isProcessOn = false;
+
+    addTaskSubmitted = false;
+    selctedProjectName;
 
     constructor(
         private dashboardService: DashboardService,
@@ -124,6 +128,61 @@ export class AddTaskComponent implements OnInit {
             type: new FormControl('LEAVE'),
             totalLeaveHours: new FormControl(0),
         });
+
+        this.masterTaskForm = this.formBuilder.group({
+            projectId: new FormControl(null),
+            masterTaskId: new FormControl(0),
+            masterTaskTitle: new FormControl('', Validators.compose([Validators.required])),
+        });
+    }
+
+    async addTask(content, projectId: any, selectedValue, index) {
+
+        if (selectedValue === 'false') {
+
+            this.addTaskSubmitted = false;
+            this.config.backdrop = 'static';
+            this.config.keyboard = false;
+            this.masterTaskForm.reset();
+
+            const newArray = await this.projectList.filter((item) => {
+                return item['projectId'] === projectId;
+            });
+
+            if (newArray) {
+                this.selctedProjectName = newArray[0]['projectName'];
+            }
+            this.modalService.open(content);
+
+            this.masterTaskForm.patchValue({ masterTaskId: 0 });
+            this.masterTaskForm.patchValue({ projectId: newArray[0]['projectId'] });
+
+            this.projectDetail.controls[index][`controls`]['taskMasterId'].setValue(null);
+        }
+    }
+
+    async saveData() {
+        this.addTaskSubmitted = true;
+
+        if (!this.masterTaskForm.valid) {
+            return;
+        }
+
+        await this.dashboardService.addEditMasterTask(this.masterTaskForm.value).toPromise().then(async res => {
+            if (res) {
+
+                this.getProjectList();
+                this.modalService.dismissAll();
+                this.masterTaskForm.reset();
+                Swal.fire({
+                    text: 'Task Added Successfully.',
+                    icon: 'success',
+                    confirmButtonText: 'Ok',
+                }).then();
+            }
+        }).catch(err => { });
+
+        this.addTaskSubmitted = false;
     }
 
     // Bind projct dropdown
@@ -397,10 +456,6 @@ export class AddTaskComponent implements OnInit {
         this.finalLeaveHoursArr.splice(index, 1);
     }
 
-    // parse(num) {
-    //     return ('0' + Math.floor(num) % 24).slice(-2) + ':' + ((num % 1) * 60 + '0').slice(0, 2);
-    // }
-
     totalHoursCalculation() {
 
         const spentTimeArr = [];
@@ -489,7 +544,7 @@ export class AddTaskComponent implements OnInit {
 
             uniqueProjectIds.forEach(uniquId => {
                 this.projectList.forEach(async (element) => {
-                    if (element['projectId'] && element['projectId'] === Number(uniquId)) {
+                    if (element && element['projectId'] === Number(uniquId)) {
                         await this.fileDetail.push(this.addprojectFiles(element));
                     }
                 });
@@ -504,6 +559,28 @@ export class AddTaskComponent implements OnInit {
         }
     }
 
+    // GetFileType(fileType) {
+    //     console.log("type...", fileType);
+
+    //  type... image/jpeg
+    //  type... application/pdf
+    //  type... image/png
+    //  type... application/zip
+    //  type... video/mp4
+    //  type... text/html
+    //  type... application/json
+
+    //     switch (fileType) {
+    //         case 'image/jpeg':
+
+    //             break;
+
+    //         default:
+    //             break;
+    //     }
+
+    // }
+
     async onFileChange(event, index) {
 
         if (event.target.files && event.target.files[0]) {
@@ -511,39 +588,54 @@ export class AddTaskComponent implements OnInit {
 
             for (let i = 0; i < filesAmount; i++) {
 
-                const name = event.target.files[i].name;
-                const fileObj = this.fileDetail.value[index];
+                const file = event.target.files[i];
+                // this.GetFileType(file.type);
+                // console.log('type', file.type);
+                const sizeInMB = (file.size / (1024 * 1024)).toFixed(2);
+                if (Number(sizeInMB) > 10) {
+                    Swal.fire({
+                        title: 'File size is too large to upload',
+                        text: 'This file is too big. Miximum limit is 10 mb only.' +
+                            'please upload file on google drive and share link in description.',
+                        icon: 'error',
+                        confirmButtonText: 'Ok',
+                    }).then();
+                } else {
 
-                for (let key in fileObj) {
-                    if (key === 'files') {
-                        if (fileObj['files'] && fileObj['files'].length > 0) {
-                            if (!fileObj['files'].includes(name)) {
-                                await fileObj['files'].push(name);
+                    const name = event.target.files[i].name;
+                    const fileObj = this.fileDetail.value[index];
+
+                    for (let key in fileObj) {
+                        if (key === 'files') {
+                            if (fileObj['files'] && fileObj['files'].length > 0) {
+                                if (!fileObj['files'].includes(name)) {
+                                    await fileObj['files'].push(name);
+                                } else {
+                                    Swal.fire({
+                                        title: 'File name is already exist.',
+                                        text: 'If you want to upload this file, Please rename it first.',
+                                        icon: 'error',
+                                        confirmButtonText: 'Ok',
+                                    }).then();
+                                }
                             } else {
-                                Swal.fire({
-                                    title: 'File name is already exist.',
-                                    text: 'If you want to upload this file, Please rename it first.',
-                                    icon: 'error',
-                                    confirmButtonText: 'Ok',
-                                }).then();
-                            }
-                        } else {
-                            if (fileObj['files']) {
-                                await fileObj['files'].push(name);
+                                if (fileObj['files']) {
+                                    await fileObj['files'].push(name);
+                                }
                             }
                         }
                     }
-                }
 
-                // setTimeout(() => {
-                var reader = new FileReader();
-                reader.onload = (event: any) => {
-                    if (this.fileDetail.value[index] && this.fileDetail.value[index]['binaryValues']) {
-                        this.fileDetail.value[index]['binaryValues'].push({ fileName: name, fileData: event.target.result });
+                    // setTimeout(() => {
+                    var reader = new FileReader();
+                    reader.onload = (event: any) => {
+                        if (this.fileDetail.value[index] && this.fileDetail.value[index]['binaryValues']) {
+                            this.fileDetail.value[index]['binaryValues'].push({ fileName: name, fileData: event.target.result });
+                        }
                     }
+                    reader.readAsDataURL(event.target.files[i]);
+                    // }, 1000);
                 }
-                reader.readAsDataURL(event.target.files[i]);
-                // }, 1000);
             }
         }
     }
